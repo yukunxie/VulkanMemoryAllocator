@@ -1665,11 +1665,18 @@ available through VmaAllocatorCreateInfo::pRecordSettings.
     #include <windows.h>
 #endif
 
-#if !defined(VMA_DEDICATED_ALLOCATION)
+#if !defined(VMA_KHR_DEDICATED_ALLOCATION)
     #if VK_KHR_get_memory_requirements2 && VK_KHR_dedicated_allocation
-        #define VMA_DEDICATED_ALLOCATION 1
+        #define VMA_KHR_DEDICATED_ALLOCATION 1
     #else
-        #define VMA_DEDICATED_ALLOCATION 0
+        #define VMA_KHR_DEDICATED_ALLOCATION 0
+    #endif
+#endif
+#if !defined(VMA_EXT_MEMORY_PRIORITY)
+    #if VK_KHR_get_physical_device_properties2 && VK_EXT_memory_priority
+        #define VMA_EXT_MEMORY_PRIORITY 1
+    #else
+        #define VMA_EXT_MEMORY_PRIORITY 0
     #endif
 #endif
 
@@ -1740,6 +1747,9 @@ validation layer. You can ignore them.
 > vkBindBufferMemory(): Binding memory to buffer 0x2d but vkGetBufferMemoryRequirements() has not been called on that buffer.
     */
     VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT = 0x00000002,
+    /** TODO
+    */
+    VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT = 0x00000004,
 
     VMA_ALLOCATOR_CREATE_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
 } VmaAllocatorCreateFlagBits;
@@ -1767,7 +1777,7 @@ typedef struct VmaVulkanFunctions {
     PFN_vkCreateImage vkCreateImage;
     PFN_vkDestroyImage vkDestroyImage;
     PFN_vkCmdCopyBuffer vkCmdCopyBuffer;
-#if VMA_DEDICATED_ALLOCATION
+#if VMA_KHR_DEDICATED_ALLOCATION
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2KHR;
     PFN_vkGetImageMemoryRequirements2KHR vkGetImageMemoryRequirements2KHR;
 #endif
@@ -2041,6 +2051,30 @@ typedef enum VmaMemoryUsage
     VMA_MEMORY_USAGE_GPU_TO_CPU = 4,
     VMA_MEMORY_USAGE_MAX_ENUM = 0x7FFFFFFF
 } VmaMemoryUsage;
+
+/** TODO
+*/
+typedef enum VmaMemoryPriority
+{
+    /** TODO
+    */
+    VMA_MEMORY_PRIORITY_UNKNOWN,
+    /** TODO
+    */
+    VMA_MEMORY_PRIORITY_LOWEST,
+    /** TODO
+    */
+    VMA_MEMORY_PRIORITY_LOW,
+    /** TODO
+    */
+    VMA_MEMORY_PRIORITY_NORMAL,
+    /** TODO
+    */
+    VMA_MEMORY_PRIORITY_HIGH,
+    /** TODO
+    */
+    VMA_MEMORY_PRIORITY_HIGHEST,
+} VmaMemoryPriority;
 
 /// Flags to be passed as VmaAllocationCreateInfo::flags.
 typedef enum VmaAllocationCreateFlagBits {
@@ -2355,6 +2389,9 @@ typedef struct VmaPoolCreateInfo {
     become lost, set this value to 0.
     */
     uint32_t frameInUseCount;
+    /** TODO
+    */
+    VmaMemoryPriority priority;
 } VmaPoolCreateInfo;
 
 /** \brief Describes parameter of existing #VmaPool.
@@ -5876,7 +5913,8 @@ public:
         uint32_t frameInUseCount,
         bool isCustomPool,
         bool explicitBlockSize,
-        uint32_t algorithm);
+        uint32_t algorithm,
+        VmaMemoryPriority priority);
     ~VmaBlockVector();
 
     VkResult CreateMinBlocks();
@@ -5887,6 +5925,7 @@ public:
     VkDeviceSize GetBufferImageGranularity() const { return m_BufferImageGranularity; }
     uint32_t GetFrameInUseCount() const { return m_FrameInUseCount; }
     uint32_t GetAlgorithm() const { return m_Algorithm; }
+    VmaMemoryPriority GetPriority() const { return m_Priority; }
 
     void GetPoolStats(VmaPoolStats* pStats);
 
@@ -5950,6 +5989,7 @@ private:
     const bool m_IsCustomPool;
     const bool m_ExplicitBlockSize;
     const uint32_t m_Algorithm;
+    const VmaMemoryPriority m_Priority;
     /* There can be at most one allocation that is completely empty - a
     hysteresis to avoid pessimistic case of alternating creation and destruction
     of a VkDeviceMemory. */
@@ -6475,7 +6515,8 @@ public:
     void WriteConfiguration(
         const VkPhysicalDeviceProperties& devProps,
         const VkPhysicalDeviceMemoryProperties& memProps,
-        bool dedicatedAllocationExtensionEnabled);
+        bool dedicatedAllocationExtensionEnabled,
+        bool memoryPriorityExtensionEnabled);
     ~VmaRecorder();
 
     void RecordCreateAllocator(uint32_t frameIndex);
@@ -6622,6 +6663,7 @@ struct VmaAllocator_T
 public:
     bool m_UseMutex;
     bool m_UseKhrDedicatedAllocation;
+    bool m_UseExtMemoryPriority;
     VkDevice m_hDevice;
     bool m_AllocationCallbacksSpecified;
     VkAllocationCallbacks m_AllocationCallbacks;
@@ -11385,7 +11427,8 @@ VmaPool_T::VmaPool_T(
         createInfo.frameInUseCount,
         true, // isCustomPool
         createInfo.blockSize != 0, // explicitBlockSize
-        createInfo.flags & VMA_POOL_CREATE_ALGORITHM_MASK), // algorithm
+        createInfo.flags & VMA_POOL_CREATE_ALGORITHM_MASK,
+        createInfo.priority), // algorithm
     m_Id(0)
 {
 }
@@ -11409,7 +11452,8 @@ VmaBlockVector::VmaBlockVector(
     uint32_t frameInUseCount,
     bool isCustomPool,
     bool explicitBlockSize,
-    uint32_t algorithm) :
+    uint32_t algorithm,
+    VmaMemoryPriority priority) :
     m_hAllocator(hAllocator),
     m_hParentPool(hParentPool),
     m_MemoryTypeIndex(memoryTypeIndex),
@@ -11421,6 +11465,7 @@ VmaBlockVector::VmaBlockVector(
     m_IsCustomPool(isCustomPool),
     m_ExplicitBlockSize(explicitBlockSize),
     m_Algorithm(algorithm),
+    m_Priority(priority),
     m_HasEmptyBlock(false),
     m_Blocks(VmaStlAllocator<VmaDeviceMemoryBlock*>(hAllocator->GetAllocationCallbacks())),
     m_NextBlockId(0)
@@ -14053,7 +14098,8 @@ VmaRecorder::UserDataString::UserDataString(VmaAllocationCreateFlags allocFlags,
 void VmaRecorder::WriteConfiguration(
     const VkPhysicalDeviceProperties& devProps,
     const VkPhysicalDeviceMemoryProperties& memProps,
-    bool dedicatedAllocationExtensionEnabled)
+    bool dedicatedAllocationExtensionEnabled,
+    bool memoryPriorityExtensionEnabled)
 {
     fprintf(m_File, "Config,Begin\n");
 
@@ -14082,6 +14128,7 @@ void VmaRecorder::WriteConfiguration(
     }
 
     fprintf(m_File, "Extension,VK_KHR_dedicated_allocation,%u\n", dedicatedAllocationExtensionEnabled ? 1 : 0);
+    fprintf(m_File, "Extension,VK_EXT_memory_priority,%u\n", memoryPriorityExtensionEnabled ? 1 : 0);
 
     fprintf(m_File, "Macro,VMA_DEBUG_ALWAYS_DEDICATED_MEMORY,%u\n", VMA_DEBUG_ALWAYS_DEDICATED_MEMORY ? 1 : 0);
     fprintf(m_File, "Macro,VMA_DEBUG_ALIGNMENT,%llu\n", (VkDeviceSize)VMA_DEBUG_ALIGNMENT);
@@ -14153,6 +14200,7 @@ void VmaAllocationObjectAllocator::Free(VmaAllocation hAlloc)
 VmaAllocator_T::VmaAllocator_T(const VmaAllocatorCreateInfo* pCreateInfo) :
     m_UseMutex((pCreateInfo->flags & VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT) == 0),
     m_UseKhrDedicatedAllocation((pCreateInfo->flags & VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT) != 0),
+    m_UseExtMemoryPriority((pCreateInfo->flags & VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT) != 0),
     m_hDevice(pCreateInfo->device),
     m_AllocationCallbacksSpecified(pCreateInfo->pAllocationCallbacks != VMA_NULL),
     m_AllocationCallbacks(pCreateInfo->pAllocationCallbacks ?
@@ -14175,7 +14223,7 @@ VmaAllocator_T::VmaAllocator_T(const VmaAllocatorCreateInfo* pCreateInfo) :
 
     VMA_ASSERT(pCreateInfo->physicalDevice && pCreateInfo->device);
 
-#if !(VMA_DEDICATED_ALLOCATION)
+#if !(VMA_KHR_DEDICATED_ALLOCATION)
     if((pCreateInfo->flags & VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT) != 0)
     {
         VMA_ASSERT(0 && "VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT set but required extensions are disabled by preprocessor macros.");
@@ -14244,7 +14292,8 @@ VmaAllocator_T::VmaAllocator_T(const VmaAllocatorCreateInfo* pCreateInfo) :
             pCreateInfo->frameInUseCount,
             false, // isCustomPool
             false, // explicitBlockSize
-            false); // linearAlgorithm
+            false, // linearAlgorithm
+            VMA_MEMORY_PRIORITY_UNKNOWN); // priority - TODO
         // No need to call m_pBlockVectors[memTypeIndex][blockVectorTypeIndex]->CreateMinBlocks here,
         // becase minBlockCount is 0.
         m_pDedicatedAllocations[memTypeIndex] = vma_new(this, AllocationVectorType)(VmaStlAllocator<VmaAllocation>(GetAllocationCallbacks()));
@@ -14269,7 +14318,8 @@ VkResult VmaAllocator_T::Init(const VmaAllocatorCreateInfo* pCreateInfo)
         m_pRecorder->WriteConfiguration(
             m_PhysicalDeviceProperties,
             m_MemProps,
-            m_UseKhrDedicatedAllocation);
+            m_UseKhrDedicatedAllocation,
+            m_UseExtMemoryPriority);
         m_pRecorder->RecordCreateAllocator(GetCurrentFrameIndex());
 #else
         VMA_ASSERT(0 && "VmaAllocatorCreateInfo::pRecordSettings used, but not supported due to VMA_RECORDING_ENABLED not defined to 1.");
@@ -14324,7 +14374,7 @@ void VmaAllocator_T::ImportVulkanFunctions(const VmaVulkanFunctions* pVulkanFunc
     m_VulkanFunctions.vkCreateImage = (PFN_vkCreateImage)vkCreateImage;
     m_VulkanFunctions.vkDestroyImage = (PFN_vkDestroyImage)vkDestroyImage;
     m_VulkanFunctions.vkCmdCopyBuffer = (PFN_vkCmdCopyBuffer)vkCmdCopyBuffer;
-#if VMA_DEDICATED_ALLOCATION
+#if VMA_KHR_DEDICATED_ALLOCATION
     if(m_UseKhrDedicatedAllocation)
     {
         m_VulkanFunctions.vkGetBufferMemoryRequirements2KHR =
@@ -14332,7 +14382,7 @@ void VmaAllocator_T::ImportVulkanFunctions(const VmaVulkanFunctions* pVulkanFunc
         m_VulkanFunctions.vkGetImageMemoryRequirements2KHR =
             (PFN_vkGetImageMemoryRequirements2KHR)vkGetDeviceProcAddr(m_hDevice, "vkGetImageMemoryRequirements2KHR");
     }
-#endif // #if VMA_DEDICATED_ALLOCATION
+#endif // #if VMA_KHR_DEDICATED_ALLOCATION
 #endif // #if VMA_STATIC_VULKAN_FUNCTIONS == 1
 
 #define VMA_COPY_IF_NOT_NULL(funcName) \
@@ -14357,7 +14407,7 @@ void VmaAllocator_T::ImportVulkanFunctions(const VmaVulkanFunctions* pVulkanFunc
         VMA_COPY_IF_NOT_NULL(vkCreateImage);
         VMA_COPY_IF_NOT_NULL(vkDestroyImage);
         VMA_COPY_IF_NOT_NULL(vkCmdCopyBuffer);
-#if VMA_DEDICATED_ALLOCATION
+#if VMA_KHR_DEDICATED_ALLOCATION
         VMA_COPY_IF_NOT_NULL(vkGetBufferMemoryRequirements2KHR);
         VMA_COPY_IF_NOT_NULL(vkGetImageMemoryRequirements2KHR);
 #endif
@@ -14384,7 +14434,7 @@ void VmaAllocator_T::ImportVulkanFunctions(const VmaVulkanFunctions* pVulkanFunc
     VMA_ASSERT(m_VulkanFunctions.vkCreateImage != VMA_NULL);
     VMA_ASSERT(m_VulkanFunctions.vkDestroyImage != VMA_NULL);
     VMA_ASSERT(m_VulkanFunctions.vkCmdCopyBuffer != VMA_NULL);
-#if VMA_DEDICATED_ALLOCATION
+#if VMA_KHR_DEDICATED_ALLOCATION
     if(m_UseKhrDedicatedAllocation)
     {
         VMA_ASSERT(m_VulkanFunctions.vkGetBufferMemoryRequirements2KHR != VMA_NULL);
@@ -14530,7 +14580,7 @@ VkResult VmaAllocator_T::AllocateDedicatedMemory(
     allocInfo.memoryTypeIndex = memTypeIndex;
     allocInfo.allocationSize = size;
 
-#if VMA_DEDICATED_ALLOCATION
+#if VMA_KHR_DEDICATED_ALLOCATION
     VkMemoryDedicatedAllocateInfoKHR dedicatedAllocInfo = { VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR };
     if(m_UseKhrDedicatedAllocation)
     {
@@ -14546,7 +14596,7 @@ VkResult VmaAllocator_T::AllocateDedicatedMemory(
             allocInfo.pNext = &dedicatedAllocInfo;
         }
     }
-#endif // #if VMA_DEDICATED_ALLOCATION
+#endif // #if VMA_KHR_DEDICATED_ALLOCATION
 
     size_t allocIndex;
     VkResult res = VK_SUCCESS;
@@ -14667,7 +14717,7 @@ void VmaAllocator_T::GetBufferMemoryRequirements(
     bool& requiresDedicatedAllocation,
     bool& prefersDedicatedAllocation) const
 {
-#if VMA_DEDICATED_ALLOCATION
+#if VMA_KHR_DEDICATED_ALLOCATION
     if(m_UseKhrDedicatedAllocation)
     {
         VkBufferMemoryRequirementsInfo2KHR memReqInfo = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2_KHR };
@@ -14685,7 +14735,7 @@ void VmaAllocator_T::GetBufferMemoryRequirements(
         prefersDedicatedAllocation  = (memDedicatedReq.prefersDedicatedAllocation  != VK_FALSE);
     }
     else
-#endif // #if VMA_DEDICATED_ALLOCATION
+#endif // #if VMA_KHR_DEDICATED_ALLOCATION
     {
         (*m_VulkanFunctions.vkGetBufferMemoryRequirements)(m_hDevice, hBuffer, &memReq);
         requiresDedicatedAllocation = false;
@@ -14699,7 +14749,7 @@ void VmaAllocator_T::GetImageMemoryRequirements(
     bool& requiresDedicatedAllocation,
     bool& prefersDedicatedAllocation) const
 {
-#if VMA_DEDICATED_ALLOCATION
+#if VMA_KHR_DEDICATED_ALLOCATION
     if(m_UseKhrDedicatedAllocation)
     {
         VkImageMemoryRequirementsInfo2KHR memReqInfo = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2_KHR };
@@ -14717,7 +14767,7 @@ void VmaAllocator_T::GetImageMemoryRequirements(
         prefersDedicatedAllocation  = (memDedicatedReq.prefersDedicatedAllocation  != VK_FALSE);
     }
     else
-#endif // #if VMA_DEDICATED_ALLOCATION
+#endif // #if VMA_KHR_DEDICATED_ALLOCATION
     {
         (*m_VulkanFunctions.vkGetImageMemoryRequirements)(m_hDevice, hImage, &memReq);
         requiresDedicatedAllocation = false;

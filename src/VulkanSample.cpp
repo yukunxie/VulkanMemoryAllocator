@@ -47,6 +47,8 @@ bool g_MemoryAliasingWarningEnabled = true;
 static bool g_EnableValidationLayer = true;
 static bool VK_KHR_get_memory_requirements2_enabled = false;
 static bool VK_KHR_dedicated_allocation_enabled = false;
+static bool g_PhysicalDeviceMemoryPrioritySupported = false;
+static bool VK_KHR_memory_priority_enabled = false;
 bool g_SparseBindingEnabled = false;
 
 static HINSTANCE g_hAppInstance;
@@ -88,6 +90,8 @@ static PFN_vkCreateDebugReportCallbackEXT g_pvkCreateDebugReportCallbackEXT;
 static PFN_vkDebugReportMessageEXT g_pvkDebugReportMessageEXT;
 static PFN_vkDestroyDebugReportCallbackEXT g_pvkDestroyDebugReportCallbackEXT;
 static VkDebugReportCallbackEXT g_hCallback;
+
+static PFN_vkGetPhysicalDeviceProperties2KHR g_pvkGetPhysicalDeviceProperties2KHR;
 
 static VkQueue g_hGraphicsQueue;
 VkQueue g_hSparseBindingQueue;
@@ -1102,6 +1106,7 @@ static void InitializeApplication()
     std::vector<const char*> instanceExtensions;
     instanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     instanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
     std::vector<const char*> instanceLayers;
     if(g_EnableValidationLayer == true)
@@ -1126,6 +1131,10 @@ static void InitializeApplication()
 
     ERR_GUARD_VULKAN( vkCreateInstance(&instInfo, NULL, &g_hVulkanInstance) );
 
+    g_pvkGetPhysicalDeviceProperties2KHR =
+        (PFN_vkGetPhysicalDeviceProperties2KHR)vkGetInstanceProcAddr(g_hVulkanInstance, "vkGetPhysicalDeviceProperties2KHR");
+    assert(g_pvkGetPhysicalDeviceProperties2KHR);
+
     // Create VkSurfaceKHR.
     VkWin32SurfaceCreateInfoKHR surfaceInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
     surfaceInfo.hinstance = g_hAppInstance;
@@ -1149,8 +1158,15 @@ static void InitializeApplication()
 
     // Query for features
 
-    VkPhysicalDeviceProperties physicalDeviceProperties = {};
-    vkGetPhysicalDeviceProperties(g_hPhysicalDevice, &physicalDeviceProperties);
+    VkPhysicalDeviceMemoryPriorityFeaturesEXT physicalDeviceMemoryPriorityFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT };
+    VkPhysicalDeviceProperties2KHR physicalDeviceProperties = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR,
+        &physicalDeviceMemoryPriorityFeatures };
+    g_pvkGetPhysicalDeviceProperties2KHR(g_hPhysicalDevice, &physicalDeviceProperties);
+
+    // 1st check - physical device support.
+    g_PhysicalDeviceMemoryPrioritySupported = physicalDeviceMemoryPriorityFeatures.memoryPriority != VK_FALSE;
 
     VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
     vkGetPhysicalDeviceFeatures(g_hPhysicalDevice, &physicalDeviceFeatures);
@@ -1260,6 +1276,13 @@ static void InitializeApplication()
                 {
                     enabledDeviceExtensions.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
                     VK_KHR_dedicated_allocation_enabled = true;
+                }
+                // 2nd check - device extension support.
+                else if(/*g_PhysicalDeviceMemoryPrioritySupported &&*/
+                    strcmp(properties[i].extensionName, VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME) == 0)
+                {
+                    enabledDeviceExtensions.push_back(VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME);
+                    VK_KHR_memory_priority_enabled = true;
                 }
             }
         }

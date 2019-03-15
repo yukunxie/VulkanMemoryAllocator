@@ -41,7 +41,7 @@ include all public interface declarations. Example:
 
 //#define VMA_HEAVY_ASSERT(expr) assert(expr)
 //#define VMA_USE_STL_CONTAINERS 1
-//#define VMA_DEDICATED_ALLOCATION 0
+//#define VMA_KHR_DEDICATED_ALLOCATION 0
 //#define VMA_DEBUG_MARGIN 16
 //#define VMA_DEBUG_DETECT_CORRUPTION 1
 //#define VMA_DEBUG_INITIALIZE_ALLOCATIONS 1

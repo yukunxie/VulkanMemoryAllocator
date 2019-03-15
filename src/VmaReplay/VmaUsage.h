@@ -33,7 +33,7 @@
 
 //#define VMA_HEAVY_ASSERT(expr) assert(expr)
 
-//#define VMA_DEDICATED_ALLOCATION 0
+//#define VMA_KHR_DEDICATED_ALLOCATION 0
 
 //#define VMA_DEBUG_MARGIN 16
 //#define VMA_DEBUG_DETECT_CORRUPTION 1
