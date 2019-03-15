@@ -1314,6 +1314,10 @@ static void InitializeApplication()
     {
         allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
     }
+    if(VK_KHR_memory_priority_enabled)
+    {
+        allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT;
+    }
 
     VkAllocationCallbacks cpuAllocationCallbacks = {};
     if(USE_CUSTOM_CPU_ALLOCATION_CALLBACKS)

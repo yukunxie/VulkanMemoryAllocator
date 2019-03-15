@@ -3775,6 +3775,27 @@ static bool VmaValidateMagicValue(const void* pData, VkDeviceSize offset)
     return true;
 }
 
+static inline float VmaMemoryPriorityToVulkanPriority(VmaMemoryPriority vmaPriority)
+{
+    switch(vmaPriority)
+    {
+    case VMA_MEMORY_PRIORITY_LOWEST:
+        return 0.f;
+    case VMA_MEMORY_PRIORITY_LOW:
+        return 0.25f;
+    case VMA_MEMORY_PRIORITY_UNKNOWN:
+    case VMA_MEMORY_PRIORITY_NORMAL:
+        return 0.5f;
+    case VMA_MEMORY_PRIORITY_HIGH:
+        return 0.75f;
+    case VMA_MEMORY_PRIORITY_HIGHEST:
+        return 1.f;
+    default:
+        VMA_ASSERT(0 && "Invalid memory priority.");
+        return 0.5f;
+    }
+}
+
 // Helper RAII class to lock a mutex in constructor and unlock it in destructor (at the end of scope).
 struct VmaMutexLock
 {
@@ -6802,6 +6823,7 @@ public:
     VkResult AllocateVulkanMemory(
         VkDeviceSize allocationSize,
         uint32_t memoryTypeIndex,
+        VmaMemoryPriority priority,
         VkDeviceMemory* pMemory);
     void FreeVulkanMemory(uint32_t memoryType, VkDeviceSize size, VkDeviceMemory hMemory);
 
@@ -12134,7 +12156,7 @@ VkResult VmaBlockVector::AllocateFromBlock(
 VkResult VmaBlockVector::CreateBlock(VkDeviceSize blockSize, size_t* pNewBlockIndex)
 {
     VkDeviceMemory mem = VK_NULL_HANDLE;
-    VkResult res = m_hAllocator->AllocateVulkanMemory(blockSize, m_MemoryTypeIndex, &mem);
+    VkResult res = m_hAllocator->AllocateVulkanMemory(blockSize, m_MemoryTypeIndex, m_Priority, &mem);
     if(res < 0)
     {
         return res;
@@ -14671,7 +14693,8 @@ VkResult VmaAllocator_T::AllocateDedicatedMemoryPage(
     VmaAllocation* pAllocation)
 {
     VkDeviceMemory hMemory = VK_NULL_HANDLE;
-    VkResult res = AllocateVulkanMemory(size, memTypeIndex, &hMemory);
+    VmaMemoryPriority priority = VMA_MEMORY_PRIORITY_UNKNOWN; // TODO!!!
+    VkResult res = AllocateVulkanMemory(size, memTypeIndex, priority, &hMemory);
     if(res < 0)
     {
         VMA_DEBUG_LOG("    vkAllocateMemory FAILED");
@@ -15347,6 +15370,7 @@ void VmaAllocator_T::CreateLostAllocation(VmaAllocation* pAllocation)
 VkResult VmaAllocator_T::AllocateVulkanMemory(
     VkDeviceSize allocationSize,
     uint32_t memoryTypeIndex,
+    VmaMemoryPriority priority,
     VkDeviceMemory* pMemory)
 {
     const uint32_t heapIndex = MemoryTypeIndexToHeapIndex(memoryTypeIndex);
@@ -15355,6 +15379,17 @@ VkResult VmaAllocator_T::AllocateVulkanMemory(
         VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
     allocInfo.allocationSize = allocationSize;
     allocInfo.memoryTypeIndex = memoryTypeIndex;
+
+#if VMA_EXT_MEMORY_PRIORITY
+    VkMemoryPriorityAllocateInfoEXT memoryPriorityAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT };
+    if(m_UseExtMemoryPriority &&
+        priority != VMA_MEMORY_PRIORITY_UNKNOWN &&
+        priority != VMA_MEMORY_PRIORITY_NORMAL)
+    {
+        memoryPriorityAllocateInfo.priority = VmaMemoryPriorityToVulkanPriority(priority);
+        allocInfo.pNext = &memoryPriorityAllocateInfo;
+    }
+#endif // #if VMA_EXT_MEMORY_PRIORITY
 
     VkResult res;
     if(m_HeapSizeLimit[heapIndex] != VK_WHOLE_SIZE)
