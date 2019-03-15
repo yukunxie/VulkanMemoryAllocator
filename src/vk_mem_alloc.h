@@ -2076,6 +2076,8 @@ typedef enum VmaMemoryPriority
     VMA_MEMORY_PRIORITY_HIGHEST,
 } VmaMemoryPriority;
 
+#define VMA_MEMORY_PRIORITY_COUNT VMA_MEMORY_PRIORITY_HIGHEST
+
 /// Flags to be passed as VmaAllocationCreateInfo::flags.
 typedef enum VmaAllocationCreateFlagBits {
     /** \brief Set this flag if the allocation should have its own memory block.
@@ -3797,6 +3799,21 @@ static inline float VmaMemoryPriorityToVulkanPriority(VmaMemoryPriority vmaPrior
         VMA_ASSERT(0 && "Invalid memory priority.");
         return 0.5f;
     }
+}
+
+static inline size_t VmaMemoryPriorityToIndex(VmaMemoryPriority priority)
+{
+    if(priority == VMA_MEMORY_PRIORITY_DEFAULT)
+    {
+        priority = VMA_MEMORY_PRIORITY_NORMAL;
+    }
+    VMA_ASSERT(priority <= VMA_MEMORY_PRIORITY_COUNT);
+    return (size_t)priority - 1;
+}
+static inline VmaMemoryPriority VmaMemoryPriorityIndexToPriority(size_t priorityIndex)
+{
+    VMA_ASSERT(priorityIndex < VMA_MEMORY_PRIORITY_COUNT);
+    return (VmaMemoryPriority)(priorityIndex + 1);
 }
 
 // Helper RAII class to lock a mutex in constructor and unlock it in destructor (at the end of scope).
@@ -5850,7 +5867,8 @@ public:
         VkDeviceMemory newMemory,
         VkDeviceSize newSize,
         uint32_t id,
-        uint32_t algorithm);
+        uint32_t algorithm,
+        VmaMemoryPriority priority);
     // Always call before destruction.
     void Destroy(VmaAllocator allocator);
     
@@ -5859,6 +5877,7 @@ public:
     uint32_t GetMemoryTypeIndex() const { return m_MemoryTypeIndex; }
     uint32_t GetId() const { return m_Id; }
     void* GetMappedData() const { return m_pMappedData; }
+    VmaMemoryPriority GetPriority() const { return m_Priority; }
 
     // Validates all data structures inside this object. If not valid, returns false.
     bool Validate() const;
@@ -5886,6 +5905,7 @@ private:
     uint32_t m_MemoryTypeIndex;
     uint32_t m_Id;
     VkDeviceMemory m_hMemory;
+    VmaMemoryPriority m_Priority;
 
     /*
     Protects access to m_hMemory so it's not used by multiple threads simultaneously, e.g. vkMapMemory, vkBindBufferMemory.
@@ -6524,7 +6544,7 @@ private:
     const uint32_t m_Flags;
     VmaDefragmentationStats* const m_pStats;
     // Owner of these objects.
-    VmaBlockVectorDefragmentationContext* m_DefaultPoolContexts[VK_MAX_MEMORY_TYPES];
+    VmaBlockVectorDefragmentationContext* m_DefaultPoolContexts[VK_MAX_MEMORY_TYPES][VMA_MEMORY_PRIORITY_COUNT];
     // Owner of these objects.
     VmaVector< VmaBlockVectorDefragmentationContext*, VmaStlAllocator<VmaBlockVectorDefragmentationContext*> > m_CustomPoolContexts;
 };
@@ -6702,7 +6722,7 @@ public:
     VkPhysicalDeviceMemoryProperties m_MemProps;
 
     // Default pools.
-    VmaBlockVector* m_pBlockVectors[VK_MAX_MEMORY_TYPES];
+    VmaBlockVector* m_pBlockVectors[VK_MAX_MEMORY_TYPES][VMA_MEMORY_PRIORITY_COUNT];
 
     // Each vector is sorted by memory (handle value).
     typedef VmaVector< VmaAllocation, VmaStlAllocator<VmaAllocation> > AllocationVectorType;
@@ -7481,6 +7501,10 @@ static const char* VMA_SUBALLOCATION_TYPE_NAMES[] = {
     "IMAGE_LINEAR",
     "IMAGE_OPTIMAL",
 };
+
+// Correspond to values of VmaMemoryPriorityToIndex(VmaMemoryPriority priority).
+static const char* VMA_MEMORY_PRIORITY_NAMES[] = {
+    "LOWEST", "LOW", "NORMAL", "HIGH", "HIGHEST" };
 
 void VmaAllocation_T::PrintParameters(class VmaJsonWriter& json) const
 {
@@ -11198,6 +11222,7 @@ VmaDeviceMemoryBlock::VmaDeviceMemoryBlock(VmaAllocator hAllocator) :
     m_MemoryTypeIndex(UINT32_MAX),
     m_Id(0),
     m_hMemory(VK_NULL_HANDLE),
+    m_Priority(VMA_MEMORY_PRIORITY_DEFAULT),
     m_MapCount(0),
     m_pMappedData(VMA_NULL)
 {
@@ -11210,7 +11235,8 @@ void VmaDeviceMemoryBlock::Init(
     VkDeviceMemory newMemory,
     VkDeviceSize newSize,
     uint32_t id,
-    uint32_t algorithm)
+    uint32_t algorithm,
+    VmaMemoryPriority priority)
 {
     VMA_ASSERT(m_hMemory == VK_NULL_HANDLE);
 
@@ -11218,6 +11244,7 @@ void VmaDeviceMemoryBlock::Init(
     m_MemoryTypeIndex = newMemoryTypeIndex;
     m_Id = id;
     m_hMemory = newMemory;
+    m_Priority = priority;
 
     switch(algorithm)
     {
@@ -12183,7 +12210,8 @@ VkResult VmaBlockVector::CreateBlock(VkDeviceSize blockSize, size_t* pNewBlockIn
         mem,
         allocInfo.allocationSize,
         m_NextBlockId++,
-        m_Algorithm);
+        m_Algorithm,
+        m_Priority);
 
     m_Blocks.push_back(pBlock);
     if(pNewBlockIndex != VMA_NULL)
@@ -12459,6 +12487,14 @@ void VmaBlockVector::PrintDetailedMap(class VmaJsonWriter& json)
         {
             json.WriteString("Algorithm");
             json.WriteString(VmaAlgorithmToStr(m_Algorithm));
+        }
+
+        if(m_Priority != VMA_MEMORY_PRIORITY_DEFAULT &&
+            m_Priority != VMA_MEMORY_PRIORITY_NORMAL)
+        {
+            const size_t priorityIndex = VmaMemoryPriorityToIndex(m_Priority);
+            json.WriteString("Priority");
+            json.WriteString(VMA_MEMORY_PRIORITY_NAMES[priorityIndex]);
         }
     }
     else
@@ -13448,13 +13484,16 @@ VmaDefragmentationContext_T::~VmaDefragmentationContext_T()
         pBlockVectorCtx->GetBlockVector()->DefragmentationEnd(pBlockVectorCtx, m_pStats);
         vma_delete(m_hAllocator, pBlockVectorCtx);
     }
-    for(size_t i = m_hAllocator->m_MemProps.memoryTypeCount; i--; )
+    for(size_t memTypeIndex = m_hAllocator->m_MemProps.memoryTypeCount; memTypeIndex--; )
     {
-        VmaBlockVectorDefragmentationContext* pBlockVectorCtx = m_DefaultPoolContexts[i];
-        if(pBlockVectorCtx)
+        for(size_t priorityIndex = VMA_MEMORY_PRIORITY_COUNT; priorityIndex--; )
         {
-            pBlockVectorCtx->GetBlockVector()->DefragmentationEnd(pBlockVectorCtx, m_pStats);
-            vma_delete(m_hAllocator, pBlockVectorCtx);
+            VmaBlockVectorDefragmentationContext* pBlockVectorCtx = m_DefaultPoolContexts[memTypeIndex][priorityIndex];
+            if(pBlockVectorCtx)
+            {
+                pBlockVectorCtx->GetBlockVector()->DefragmentationEnd(pBlockVectorCtx, m_pStats);
+                vma_delete(m_hAllocator, pBlockVectorCtx);
+            }
         }
     }
 }
@@ -13543,16 +13582,19 @@ void VmaDefragmentationContext_T::AddAllocations(
             else
             {
                 const uint32_t memTypeIndex = hAlloc->GetMemoryTypeIndex();
-                pBlockVectorDefragCtx = m_DefaultPoolContexts[memTypeIndex];
+                VmaDeviceMemoryBlock* const pBlock = hAlloc->GetBlock();
+                const VmaMemoryPriority priority = pBlock->GetPriority();
+                const size_t priorityIndex = VmaMemoryPriorityToIndex(priority);
+                pBlockVectorDefragCtx = m_DefaultPoolContexts[memTypeIndex][priorityIndex];
                 if(!pBlockVectorDefragCtx)
                 {
                     pBlockVectorDefragCtx = vma_new(m_hAllocator, VmaBlockVectorDefragmentationContext)(
                         m_hAllocator,
                         VMA_NULL, // hCustomPool
-                        m_hAllocator->m_pBlockVectors[memTypeIndex],
+                        m_hAllocator->m_pBlockVectors[memTypeIndex][priorityIndex],
                         m_CurrFrameIndex,
                         m_Flags);
-                    m_DefaultPoolContexts[memTypeIndex] = pBlockVectorDefragCtx;
+                    m_DefaultPoolContexts[memTypeIndex][priorityIndex] = pBlockVectorDefragCtx;
                 }
             }
 
@@ -13589,19 +13631,22 @@ VkResult VmaDefragmentationContext_T::Defragment(
         memTypeIndex < m_hAllocator->GetMemoryTypeCount() && res >= VK_SUCCESS;
         ++memTypeIndex)
     {
-        VmaBlockVectorDefragmentationContext* pBlockVectorCtx = m_DefaultPoolContexts[memTypeIndex];
-        if(pBlockVectorCtx)
+        for(size_t priorityIndex = 0; priorityIndex < VMA_MEMORY_PRIORITY_COUNT; ++priorityIndex)
         {
-            VMA_ASSERT(pBlockVectorCtx->GetBlockVector());
-            pBlockVectorCtx->GetBlockVector()->Defragment(
-                pBlockVectorCtx,
-                pStats,
-                maxCpuBytesToMove, maxCpuAllocationsToMove,
-                maxGpuBytesToMove, maxGpuAllocationsToMove,
-                commandBuffer);
-            if(pBlockVectorCtx->res != VK_SUCCESS)
+            VmaBlockVectorDefragmentationContext* pBlockVectorCtx = m_DefaultPoolContexts[memTypeIndex][priorityIndex];
+            if(pBlockVectorCtx)
             {
-                res = pBlockVectorCtx->res;
+                VMA_ASSERT(pBlockVectorCtx->GetBlockVector());
+                pBlockVectorCtx->GetBlockVector()->Defragment(
+                    pBlockVectorCtx,
+                    pStats,
+                    maxCpuBytesToMove, maxCpuAllocationsToMove,
+                    maxGpuBytesToMove, maxGpuAllocationsToMove,
+                    commandBuffer);
+                if(pBlockVectorCtx->res != VK_SUCCESS)
+                {
+                    res = pBlockVectorCtx->res;
+                }
             }
         }
     }
@@ -14311,24 +14356,25 @@ VmaAllocator_T::VmaAllocator_T(const VmaAllocatorCreateInfo* pCreateInfo) :
     for(uint32_t memTypeIndex = 0; memTypeIndex < GetMemoryTypeCount(); ++memTypeIndex)
     {
         const VkDeviceSize preferredBlockSize = CalcPreferredBlockSize(memTypeIndex);
-
-        m_pBlockVectors[memTypeIndex] = vma_new(this, VmaBlockVector)(
-            this,
-            VK_NULL_HANDLE, // hParentPool
-            memTypeIndex,
-            preferredBlockSize,
-            0,
-            SIZE_MAX,
-            GetBufferImageGranularity(),
-            pCreateInfo->frameInUseCount,
-            false, // isCustomPool
-            false, // explicitBlockSize
-            false, // linearAlgorithm
-            VMA_MEMORY_PRIORITY_DEFAULT); // priority - TODO
-        // No need to call m_pBlockVectors[memTypeIndex][blockVectorTypeIndex]->CreateMinBlocks here,
-        // becase minBlockCount is 0.
-        m_pDedicatedAllocations[memTypeIndex] = vma_new(this, AllocationVectorType)(VmaStlAllocator<VmaAllocation>(GetAllocationCallbacks()));
-
+        for(size_t priorityIndex = 0; priorityIndex < VMA_MEMORY_PRIORITY_COUNT; ++priorityIndex)
+        {
+            m_pBlockVectors[memTypeIndex][priorityIndex] = vma_new(this, VmaBlockVector)(
+                this,
+                VK_NULL_HANDLE, // hParentPool
+                memTypeIndex,
+                preferredBlockSize,
+                0,
+                SIZE_MAX,
+                GetBufferImageGranularity(),
+                pCreateInfo->frameInUseCount,
+                false, // isCustomPool
+                false, // explicitBlockSize
+                false, // linearAlgorithm
+                VmaMemoryPriorityIndexToPriority(priorityIndex));
+            // No need to call m_pBlockVectors[memTypeIndex][blockVectorTypeIndex]->CreateMinBlocks here,
+            // becase minBlockCount is 0.
+            m_pDedicatedAllocations[memTypeIndex] = vma_new(this, AllocationVectorType)(VmaStlAllocator<VmaAllocation>(GetAllocationCallbacks()));
+        }
     }
 }
 
@@ -14373,15 +14419,20 @@ VmaAllocator_T::~VmaAllocator_T()
     
     VMA_ASSERT(m_Pools.empty());
 
-    for(size_t i = GetMemoryTypeCount(); i--; )
+    for(size_t memTypeIndex = GetMemoryTypeCount(); memTypeIndex--; )
     {
-        if(m_pDedicatedAllocations[i] != VMA_NULL && !m_pDedicatedAllocations[i]->empty())
+        for(size_t priorityIndex = VMA_MEMORY_PRIORITY_COUNT; priorityIndex--; )
+        {
+            vma_delete(this, m_pBlockVectors[memTypeIndex][priorityIndex]);
+        }
+
+        if(m_pDedicatedAllocations[memTypeIndex] != VMA_NULL &&
+            !m_pDedicatedAllocations[memTypeIndex]->empty())
         {
             VMA_ASSERT(0 && "Unfreed dedicated allocations found.");
         }
 
-        vma_delete(this, m_pDedicatedAllocations[i]);
-        vma_delete(this, m_pBlockVectors[i]);
+        vma_delete(this, m_pDedicatedAllocations[memTypeIndex]);
     }
 }
 
@@ -14507,7 +14558,9 @@ VkResult VmaAllocator_T::AllocateMemoryOfType(
         finalCreateInfo.flags &= ~VMA_ALLOCATION_CREATE_MAPPED_BIT;
     }
 
-    VmaBlockVector* const blockVector = m_pBlockVectors[memTypeIndex];
+    const size_t priorityIndex = VmaMemoryPriorityToIndex(priority);
+
+    VmaBlockVector* const blockVector = m_pBlockVectors[memTypeIndex][priorityIndex];
     VMA_ASSERT(blockVector);
 
     const VkDeviceSize preferredBlockSize = blockVector->GetPreferredBlockSize();
@@ -14980,15 +15033,18 @@ void VmaAllocator_T::FreeMemory(
                 case VmaAllocation_T::ALLOCATION_TYPE_BLOCK:
                     {
                         VmaBlockVector* pBlockVector = VMA_NULL;
-                        VmaPool hPool = allocation->GetBlock()->GetParentPool();
+                        VmaDeviceMemoryBlock* const pBlock = allocation->GetBlock();
+                        VmaPool hPool = pBlock->GetParentPool();
                         if(hPool != VK_NULL_HANDLE)
                         {
                             pBlockVector = &hPool->m_BlockVector;
                         }
                         else
                         {
-                            const uint32_t memTypeIndex = allocation->GetMemoryTypeIndex();
-                            pBlockVector = m_pBlockVectors[memTypeIndex];
+                            const uint32_t memTypeIndex = pBlock->GetMemoryTypeIndex();
+                            const VmaMemoryPriority priority = pBlock->GetPriority();
+                            const size_t priorityIndex = VmaMemoryPriorityToIndex(priority);
+                            pBlockVector = m_pBlockVectors[memTypeIndex][priorityIndex];
                         }
                         pBlockVector->Free(allocation);
                     }
@@ -15054,9 +15110,12 @@ void VmaAllocator_T::CalculateStats(VmaStats* pStats)
     // Process default pools.
     for(uint32_t memTypeIndex = 0; memTypeIndex < GetMemoryTypeCount(); ++memTypeIndex)
     {
-        VmaBlockVector* const pBlockVector = m_pBlockVectors[memTypeIndex];
-        VMA_ASSERT(pBlockVector);
-        pBlockVector->AddStats(pStats);
+        for(size_t priorityIndex = 0; priorityIndex < VMA_MEMORY_PRIORITY_COUNT; ++priorityIndex)
+        {
+            VmaBlockVector* const pBlockVector = m_pBlockVectors[memTypeIndex][priorityIndex];
+            VMA_ASSERT(pBlockVector);
+            pBlockVector->AddStats(pStats);
+        }
     }
 
     // Process custom pools.
@@ -15339,18 +15398,21 @@ VkResult VmaAllocator_T::CheckCorruption(uint32_t memoryTypeBits)
     {
         if(((1u << memTypeIndex) & memoryTypeBits) != 0)
         {
-            VmaBlockVector* const pBlockVector = m_pBlockVectors[memTypeIndex];
-            VMA_ASSERT(pBlockVector);
-            VkResult localRes = pBlockVector->CheckCorruption();
-            switch(localRes)
+            for(size_t priorityIndex = 0; priorityIndex < VMA_MEMORY_PRIORITY_COUNT; ++priorityIndex)
             {
-            case VK_ERROR_FEATURE_NOT_PRESENT:
-                break;
-            case VK_SUCCESS:
-                finalRes = VK_SUCCESS;
-                break;
-            default:
-                return localRes;
+                VmaBlockVector* const pBlockVector = m_pBlockVectors[memTypeIndex][priorityIndex];
+                VMA_ASSERT(pBlockVector);
+                VkResult localRes = pBlockVector->CheckCorruption();
+                switch(localRes)
+                {
+                case VK_ERROR_FEATURE_NOT_PRESENT:
+                    break;
+                case VK_SUCCESS:
+                    finalRes = VK_SUCCESS;
+                    break;
+                default:
+                    return localRes;
+                }
             }
         }
     }
@@ -15721,22 +15783,31 @@ void VmaAllocator_T::PrintDetailedMap(VmaJsonWriter& json)
 
     {
         bool allocationsStarted = false;
+        const size_t defaultPriorityIndex = VmaMemoryPriorityToIndex(VMA_MEMORY_PRIORITY_DEFAULT);
         for(uint32_t memTypeIndex = 0; memTypeIndex < GetMemoryTypeCount(); ++memTypeIndex)
         {
-            if(m_pBlockVectors[memTypeIndex]->IsEmpty() == false)
+            for(size_t priorityIndex = 0; priorityIndex < VMA_MEMORY_PRIORITY_COUNT; ++priorityIndex)
             {
-                if(allocationsStarted == false)
+                if(m_pBlockVectors[memTypeIndex][priorityIndex]->IsEmpty() == false)
                 {
-                    allocationsStarted = true;
-                    json.WriteString("DefaultPools");
-                    json.BeginObject();
+                    if(allocationsStarted == false)
+                    {
+                        allocationsStarted = true;
+                        json.WriteString("DefaultPools");
+                        json.BeginObject();
+                    }
+
+                    json.BeginString("Type ");
+                    json.ContinueString(memTypeIndex);
+                    if(priorityIndex != defaultPriorityIndex)
+                    {
+                        json.ContinueString(" priority ");
+                        json.ContinueString(VMA_MEMORY_PRIORITY_NAMES[priorityIndex]);
+                    }
+                    json.EndString();
+
+                    m_pBlockVectors[memTypeIndex][priorityIndex]->PrintDetailedMap(json);
                 }
-
-                json.BeginString("Type ");
-                json.ContinueString(memTypeIndex);
-                json.EndString();
-
-                m_pBlockVectors[memTypeIndex]->PrintDetailedMap(json);
             }
         }
         if(allocationsStarted)

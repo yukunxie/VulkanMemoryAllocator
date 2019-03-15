@@ -741,6 +741,10 @@ static void CreateSwapchain()
 
     VmaAllocationCreateInfo depthImageAllocCreateInfo = {};
     depthImageAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    
+    // TODO DELME testing priority
+    //depthImageAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+    depthImageAllocCreateInfo.priority = VMA_MEMORY_PRIORITY_HIGHEST;
 
     ERR_GUARD_VULKAN( vmaCreateImage(g_hAllocator, &depthImageInfo, &depthImageAllocCreateInfo, &g_hDepthImage, &g_hDepthImageAlloc, nullptr) );
 
