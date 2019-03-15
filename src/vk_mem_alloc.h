@@ -6799,7 +6799,10 @@ public:
 
     void CreateLostAllocation(VmaAllocation* pAllocation);
 
-    VkResult AllocateVulkanMemory(const VkMemoryAllocateInfo* pAllocateInfo, VkDeviceMemory* pMemory);
+    VkResult AllocateVulkanMemory(
+        VkDeviceSize allocationSize,
+        uint32_t memoryTypeIndex,
+        VkDeviceMemory* pMemory);
     void FreeVulkanMemory(uint32_t memoryType, VkDeviceSize size, VkDeviceMemory hMemory);
 
     VkResult Map(VmaAllocation hAllocation, void** ppData);
@@ -6853,7 +6856,6 @@ private:
         VkDeviceSize size,
         VmaSuballocationType suballocType,
         uint32_t memTypeIndex,
-        const VkMemoryAllocateInfo& allocInfo,
         bool map,
         bool isUserDataString,
         void* pUserData,
@@ -12131,11 +12133,8 @@ VkResult VmaBlockVector::AllocateFromBlock(
 
 VkResult VmaBlockVector::CreateBlock(VkDeviceSize blockSize, size_t* pNewBlockIndex)
 {
-    VkMemoryAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-    allocInfo.memoryTypeIndex = m_MemoryTypeIndex;
-    allocInfo.allocationSize = blockSize;
     VkDeviceMemory mem = VK_NULL_HANDLE;
-    VkResult res = m_hAllocator->AllocateVulkanMemory(&allocInfo, &mem);
+    VkResult res = m_hAllocator->AllocateVulkanMemory(blockSize, m_MemoryTypeIndex, &mem);
     if(res < 0)
     {
         return res;
@@ -12150,7 +12149,7 @@ VkResult VmaBlockVector::CreateBlock(VkDeviceSize blockSize, size_t* pNewBlockIn
         m_hParentPool,
         m_MemoryTypeIndex,
         mem,
-        allocInfo.allocationSize,
+        blockSize,
         m_NextBlockId++,
         m_Algorithm);
 
@@ -14606,7 +14605,6 @@ VkResult VmaAllocator_T::AllocateDedicatedMemory(
             size,
             suballocType,
             memTypeIndex,
-            allocInfo,
             map,
             isUserDataString,
             pUserData,
@@ -14667,14 +14665,13 @@ VkResult VmaAllocator_T::AllocateDedicatedMemoryPage(
     VkDeviceSize size,
     VmaSuballocationType suballocType,
     uint32_t memTypeIndex,
-    const VkMemoryAllocateInfo& allocInfo,
     bool map,
     bool isUserDataString,
     void* pUserData,
     VmaAllocation* pAllocation)
 {
     VkDeviceMemory hMemory = VK_NULL_HANDLE;
-    VkResult res = AllocateVulkanMemory(&allocInfo, &hMemory);
+    VkResult res = AllocateVulkanMemory(size, memTypeIndex, &hMemory);
     if(res < 0)
     {
         VMA_DEBUG_LOG("    vkAllocateMemory FAILED");
@@ -15347,20 +15344,28 @@ void VmaAllocator_T::CreateLostAllocation(VmaAllocation* pAllocation)
     (*pAllocation)->InitLost();
 }
 
-VkResult VmaAllocator_T::AllocateVulkanMemory(const VkMemoryAllocateInfo* pAllocateInfo, VkDeviceMemory* pMemory)
+VkResult VmaAllocator_T::AllocateVulkanMemory(
+    VkDeviceSize allocationSize,
+    uint32_t memoryTypeIndex,
+    VkDeviceMemory* pMemory)
 {
-    const uint32_t heapIndex = MemoryTypeIndexToHeapIndex(pAllocateInfo->memoryTypeIndex);
+    const uint32_t heapIndex = MemoryTypeIndexToHeapIndex(memoryTypeIndex);
+
+    VkMemoryAllocateInfo allocInfo = {
+        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    allocInfo.allocationSize = allocationSize;
+    allocInfo.memoryTypeIndex = memoryTypeIndex;
 
     VkResult res;
     if(m_HeapSizeLimit[heapIndex] != VK_WHOLE_SIZE)
     {
         VmaMutexLock lock(m_HeapSizeLimitMutex, m_UseMutex);
-        if(m_HeapSizeLimit[heapIndex] >= pAllocateInfo->allocationSize)
+        if(m_HeapSizeLimit[heapIndex] >= allocationSize)
         {
-            res = (*m_VulkanFunctions.vkAllocateMemory)(m_hDevice, pAllocateInfo, GetAllocationCallbacks(), pMemory);
+            res = (*m_VulkanFunctions.vkAllocateMemory)(m_hDevice, &allocInfo, GetAllocationCallbacks(), pMemory);
             if(res == VK_SUCCESS)
             {
-                m_HeapSizeLimit[heapIndex] -= pAllocateInfo->allocationSize;
+                m_HeapSizeLimit[heapIndex] -= allocationSize;
             }
         }
         else
@@ -15370,12 +15375,12 @@ VkResult VmaAllocator_T::AllocateVulkanMemory(const VkMemoryAllocateInfo* pAlloc
     }
     else
     {
-        res = (*m_VulkanFunctions.vkAllocateMemory)(m_hDevice, pAllocateInfo, GetAllocationCallbacks(), pMemory);
+        res = (*m_VulkanFunctions.vkAllocateMemory)(m_hDevice, &allocInfo, GetAllocationCallbacks(), pMemory);
     }
 
     if(res == VK_SUCCESS && m_DeviceMemoryCallbacks.pfnAllocate != VMA_NULL)
     {
-        (*m_DeviceMemoryCallbacks.pfnAllocate)(this, pAllocateInfo->memoryTypeIndex, *pMemory, pAllocateInfo->allocationSize);
+        (*m_DeviceMemoryCallbacks.pfnAllocate)(this, memoryTypeIndex, *pMemory, allocationSize);
     }
 
     return res;

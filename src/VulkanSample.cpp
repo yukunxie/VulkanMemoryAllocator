@@ -92,6 +92,7 @@ static PFN_vkDestroyDebugReportCallbackEXT g_pvkDestroyDebugReportCallbackEXT;
 static VkDebugReportCallbackEXT g_hCallback;
 
 static PFN_vkGetPhysicalDeviceProperties2KHR g_pvkGetPhysicalDeviceProperties2KHR;
+static PFN_vkGetPhysicalDeviceFeatures2KHR g_pvkGetPhysicalDeviceFeatures2KHR;
 
 static VkQueue g_hGraphicsQueue;
 VkQueue g_hSparseBindingQueue;
@@ -1133,7 +1134,10 @@ static void InitializeApplication()
 
     g_pvkGetPhysicalDeviceProperties2KHR =
         (PFN_vkGetPhysicalDeviceProperties2KHR)vkGetInstanceProcAddr(g_hVulkanInstance, "vkGetPhysicalDeviceProperties2KHR");
+    g_pvkGetPhysicalDeviceFeatures2KHR =
+        (PFN_vkGetPhysicalDeviceFeatures2KHR)vkGetInstanceProcAddr(g_hVulkanInstance, "vkGetPhysicalDeviceFeatures2KHR");
     assert(g_pvkGetPhysicalDeviceProperties2KHR);
+    assert(g_pvkGetPhysicalDeviceFeatures2KHR);
 
     // Create VkSurfaceKHR.
     VkWin32SurfaceCreateInfoKHR surfaceInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
@@ -1158,20 +1162,21 @@ static void InitializeApplication()
 
     // Query for features
 
+    VkPhysicalDeviceProperties2KHR physicalDeviceProperties = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR };
+    g_pvkGetPhysicalDeviceProperties2KHR(g_hPhysicalDevice, &physicalDeviceProperties);
+
     VkPhysicalDeviceMemoryPriorityFeaturesEXT physicalDeviceMemoryPriorityFeatures = {
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT };
-    VkPhysicalDeviceProperties2KHR physicalDeviceProperties = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR,
+    VkPhysicalDeviceFeatures2KHR physicalDeviceFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR,
         &physicalDeviceMemoryPriorityFeatures };
-    g_pvkGetPhysicalDeviceProperties2KHR(g_hPhysicalDevice, &physicalDeviceProperties);
+    g_pvkGetPhysicalDeviceFeatures2KHR(g_hPhysicalDevice, &physicalDeviceFeatures);
+
+    g_SparseBindingEnabled = physicalDeviceFeatures.features.sparseBinding != 0;
 
     // 1st check - physical device support.
     g_PhysicalDeviceMemoryPrioritySupported = physicalDeviceMemoryPriorityFeatures.memoryPriority != VK_FALSE;
-
-    VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
-    vkGetPhysicalDeviceFeatures(g_hPhysicalDevice, &physicalDeviceFeatures);
-
-    g_SparseBindingEnabled = physicalDeviceFeatures.sparseBinding != 0;
 
     // Find queue family index
 
@@ -1278,7 +1283,7 @@ static void InitializeApplication()
                     VK_KHR_dedicated_allocation_enabled = true;
                 }
                 // 2nd check - device extension support.
-                else if(/*g_PhysicalDeviceMemoryPrioritySupported &&*/
+                else if(g_PhysicalDeviceMemoryPrioritySupported &&
                     strcmp(properties[i].extensionName, VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME) == 0)
                 {
                     enabledDeviceExtensions.push_back(VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME);
