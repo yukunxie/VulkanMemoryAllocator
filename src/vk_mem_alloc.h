@@ -2058,7 +2058,7 @@ typedef enum VmaMemoryPriority
 {
     /** TODO
     */
-    VMA_MEMORY_PRIORITY_UNKNOWN,
+    VMA_MEMORY_PRIORITY_DEFAULT,
     /** TODO
     */
     VMA_MEMORY_PRIORITY_LOWEST,
@@ -2225,6 +2225,9 @@ typedef struct VmaAllocationCreateInfo
     internal buffer, so it doesn't need to be valid after allocation call.
     */
     void* pUserData;
+    /* TODO
+    */
+    VmaMemoryPriority priority;
 } VmaAllocationCreateInfo;
 
 /**
@@ -3783,7 +3786,7 @@ static inline float VmaMemoryPriorityToVulkanPriority(VmaMemoryPriority vmaPrior
         return 0.f;
     case VMA_MEMORY_PRIORITY_LOW:
         return 0.25f;
-    case VMA_MEMORY_PRIORITY_UNKNOWN:
+    case VMA_MEMORY_PRIORITY_DEFAULT:
     case VMA_MEMORY_PRIORITY_NORMAL:
         return 0.5f;
     case VMA_MEMORY_PRIORITY_HIGH:
@@ -6771,6 +6774,7 @@ public:
     // Main allocation function.
     VkResult AllocateMemory(
         const VkMemoryRequirements& vkMemReq,
+        VmaMemoryPriority priority,
         bool requiresDedicatedAllocation,
         bool prefersDedicatedAllocation,
         VkBuffer dedicatedBuffer,
@@ -6821,8 +6825,7 @@ public:
     void CreateLostAllocation(VmaAllocation* pAllocation);
 
     VkResult AllocateVulkanMemory(
-        VkDeviceSize allocationSize,
-        uint32_t memoryTypeIndex,
+        VkMemoryAllocateInfo* pAllocateInfo,
         VmaMemoryPriority priority,
         VkDeviceMemory* pMemory);
     void FreeVulkanMemory(uint32_t memoryType, VkDeviceSize size, VkDeviceMemory hMemory);
@@ -6869,6 +6872,7 @@ private:
         VkImage dedicatedImage,
         const VmaAllocationCreateInfo& createInfo,
         uint32_t memTypeIndex,
+        VmaMemoryPriority priority,
         VmaSuballocationType suballocType,
         size_t allocationCount,
         VmaAllocation* pAllocations);
@@ -6878,6 +6882,8 @@ private:
         VkDeviceSize size,
         VmaSuballocationType suballocType,
         uint32_t memTypeIndex,
+        VmaMemoryPriority priority,
+        VkMemoryAllocateInfo& allocInfo,
         bool map,
         bool isUserDataString,
         void* pUserData,
@@ -6888,6 +6894,7 @@ private:
         VkDeviceSize size,
         VmaSuballocationType suballocType,
         uint32_t memTypeIndex,
+        VmaMemoryPriority priority,
         bool map,
         bool isUserDataString,
         void* pUserData,
@@ -12155,8 +12162,11 @@ VkResult VmaBlockVector::AllocateFromBlock(
 
 VkResult VmaBlockVector::CreateBlock(VkDeviceSize blockSize, size_t* pNewBlockIndex)
 {
+    VkMemoryAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    allocInfo.memoryTypeIndex = m_MemoryTypeIndex;
+    allocInfo.allocationSize = blockSize;
     VkDeviceMemory mem = VK_NULL_HANDLE;
-    VkResult res = m_hAllocator->AllocateVulkanMemory(blockSize, m_MemoryTypeIndex, m_Priority, &mem);
+    VkResult res = m_hAllocator->AllocateVulkanMemory(&allocInfo, m_Priority, &mem);
     if(res < 0)
     {
         return res;
@@ -12171,7 +12181,7 @@ VkResult VmaBlockVector::CreateBlock(VkDeviceSize blockSize, size_t* pNewBlockIn
         m_hParentPool,
         m_MemoryTypeIndex,
         mem,
-        blockSize,
+        allocInfo.allocationSize,
         m_NextBlockId++,
         m_Algorithm);
 
@@ -14314,7 +14324,7 @@ VmaAllocator_T::VmaAllocator_T(const VmaAllocatorCreateInfo* pCreateInfo) :
             false, // isCustomPool
             false, // explicitBlockSize
             false, // linearAlgorithm
-            VMA_MEMORY_PRIORITY_UNKNOWN); // priority - TODO
+            VMA_MEMORY_PRIORITY_DEFAULT); // priority - TODO
         // No need to call m_pBlockVectors[memTypeIndex][blockVectorTypeIndex]->CreateMinBlocks here,
         // becase minBlockCount is 0.
         m_pDedicatedAllocations[memTypeIndex] = vma_new(this, AllocationVectorType)(VmaStlAllocator<VmaAllocation>(GetAllocationCallbacks()));
@@ -14480,6 +14490,7 @@ VkResult VmaAllocator_T::AllocateMemoryOfType(
     VkImage dedicatedImage,
     const VmaAllocationCreateInfo& createInfo,
     uint32_t memTypeIndex,
+    VmaMemoryPriority priority,
     VmaSuballocationType suballocType,
     size_t allocationCount,
     VmaAllocation* pAllocations)
@@ -14525,6 +14536,7 @@ VkResult VmaAllocator_T::AllocateMemoryOfType(
                 size,
                 suballocType,
                 memTypeIndex,
+                priority,
                 (finalCreateInfo.flags & VMA_ALLOCATION_CREATE_MAPPED_BIT) != 0,
                 (finalCreateInfo.flags & VMA_ALLOCATION_CREATE_USER_DATA_COPY_STRING_BIT) != 0,
                 finalCreateInfo.pUserData,
@@ -14560,6 +14572,7 @@ VkResult VmaAllocator_T::AllocateMemoryOfType(
                 size,
                 suballocType,
                 memTypeIndex,
+                priority,
                 (finalCreateInfo.flags & VMA_ALLOCATION_CREATE_MAPPED_BIT) != 0,
                 (finalCreateInfo.flags & VMA_ALLOCATION_CREATE_USER_DATA_COPY_STRING_BIT) != 0,
                 finalCreateInfo.pUserData,
@@ -14587,6 +14600,7 @@ VkResult VmaAllocator_T::AllocateDedicatedMemory(
     VkDeviceSize size,
     VmaSuballocationType suballocType,
     uint32_t memTypeIndex,
+    VmaMemoryPriority priority,
     bool map,
     bool isUserDataString,
     void* pUserData,
@@ -14627,6 +14641,8 @@ VkResult VmaAllocator_T::AllocateDedicatedMemory(
             size,
             suballocType,
             memTypeIndex,
+            priority,
+            allocInfo,
             map,
             isUserDataString,
             pUserData,
@@ -14687,14 +14703,15 @@ VkResult VmaAllocator_T::AllocateDedicatedMemoryPage(
     VkDeviceSize size,
     VmaSuballocationType suballocType,
     uint32_t memTypeIndex,
+    VmaMemoryPriority priority,
+    VkMemoryAllocateInfo& allocInfo,
     bool map,
     bool isUserDataString,
     void* pUserData,
     VmaAllocation* pAllocation)
 {
     VkDeviceMemory hMemory = VK_NULL_HANDLE;
-    VmaMemoryPriority priority = VMA_MEMORY_PRIORITY_UNKNOWN; // TODO!!!
-    VkResult res = AllocateVulkanMemory(size, memTypeIndex, priority, &hMemory);
+    VkResult res = AllocateVulkanMemory(&allocInfo, priority, &hMemory);
     if(res < 0)
     {
         VMA_DEBUG_LOG("    vkAllocateMemory FAILED");
@@ -14797,6 +14814,7 @@ void VmaAllocator_T::GetImageMemoryRequirements(
 
 VkResult VmaAllocator_T::AllocateMemory(
     const VkMemoryRequirements& vkMemReq,
+    VmaMemoryPriority priority,
     bool requiresDedicatedAllocation,
     bool prefersDedicatedAllocation,
     VkBuffer dedicatedBuffer,
@@ -14880,6 +14898,7 @@ VkResult VmaAllocator_T::AllocateMemory(
                 dedicatedImage,
                 createInfo,
                 memTypeIndex,
+                priority,
                 suballocType,
                 allocationCount,
                 pAllocations);
@@ -14911,6 +14930,7 @@ VkResult VmaAllocator_T::AllocateMemory(
                             dedicatedImage,
                             createInfo,
                             memTypeIndex,
+                            priority,
                             suballocType,
                             allocationCount,
                             pAllocations);
@@ -15368,39 +15388,34 @@ void VmaAllocator_T::CreateLostAllocation(VmaAllocation* pAllocation)
 }
 
 VkResult VmaAllocator_T::AllocateVulkanMemory(
-    VkDeviceSize allocationSize,
-    uint32_t memoryTypeIndex,
+    VkMemoryAllocateInfo* pAllocateInfo,
     VmaMemoryPriority priority,
     VkDeviceMemory* pMemory)
 {
-    const uint32_t heapIndex = MemoryTypeIndexToHeapIndex(memoryTypeIndex);
-
-    VkMemoryAllocateInfo allocInfo = {
-        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-    allocInfo.allocationSize = allocationSize;
-    allocInfo.memoryTypeIndex = memoryTypeIndex;
-
 #if VMA_EXT_MEMORY_PRIORITY
     VkMemoryPriorityAllocateInfoEXT memoryPriorityAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT };
     if(m_UseExtMemoryPriority &&
-        priority != VMA_MEMORY_PRIORITY_UNKNOWN &&
+        priority != VMA_MEMORY_PRIORITY_DEFAULT &&
         priority != VMA_MEMORY_PRIORITY_NORMAL)
     {
         memoryPriorityAllocateInfo.priority = VmaMemoryPriorityToVulkanPriority(priority);
-        allocInfo.pNext = &memoryPriorityAllocateInfo;
+        memoryPriorityAllocateInfo.pNext = pAllocateInfo->pNext;
+        pAllocateInfo->pNext = &memoryPriorityAllocateInfo;
     }
 #endif // #if VMA_EXT_MEMORY_PRIORITY
+
+    const uint32_t heapIndex = MemoryTypeIndexToHeapIndex(pAllocateInfo->memoryTypeIndex);
 
     VkResult res;
     if(m_HeapSizeLimit[heapIndex] != VK_WHOLE_SIZE)
     {
         VmaMutexLock lock(m_HeapSizeLimitMutex, m_UseMutex);
-        if(m_HeapSizeLimit[heapIndex] >= allocationSize)
+        if(m_HeapSizeLimit[heapIndex] >= pAllocateInfo->allocationSize)
         {
-            res = (*m_VulkanFunctions.vkAllocateMemory)(m_hDevice, &allocInfo, GetAllocationCallbacks(), pMemory);
+            res = (*m_VulkanFunctions.vkAllocateMemory)(m_hDevice, pAllocateInfo, GetAllocationCallbacks(), pMemory);
             if(res == VK_SUCCESS)
             {
-                m_HeapSizeLimit[heapIndex] -= allocationSize;
+                m_HeapSizeLimit[heapIndex] -= pAllocateInfo->allocationSize;
             }
         }
         else
@@ -15410,12 +15425,12 @@ VkResult VmaAllocator_T::AllocateVulkanMemory(
     }
     else
     {
-        res = (*m_VulkanFunctions.vkAllocateMemory)(m_hDevice, &allocInfo, GetAllocationCallbacks(), pMemory);
+        res = (*m_VulkanFunctions.vkAllocateMemory)(m_hDevice, pAllocateInfo, GetAllocationCallbacks(), pMemory);
     }
 
     if(res == VK_SUCCESS && m_DeviceMemoryCallbacks.pfnAllocate != VMA_NULL)
     {
-        (*m_DeviceMemoryCallbacks.pfnAllocate)(this, memoryTypeIndex, *pMemory, allocationSize);
+        (*m_DeviceMemoryCallbacks.pfnAllocate)(this, pAllocateInfo->memoryTypeIndex, *pMemory, pAllocateInfo->allocationSize);
     }
 
     return res;
@@ -16207,6 +16222,7 @@ VkResult vmaAllocateMemory(
 
 	VkResult result = allocator->AllocateMemory(
         *pVkMemoryRequirements,
+        pCreateInfo->priority,
         false, // requiresDedicatedAllocation
         false, // prefersDedicatedAllocation
         VK_NULL_HANDLE, // dedicatedBuffer
@@ -16256,6 +16272,7 @@ VkResult vmaAllocateMemoryPages(
 
 	VkResult result = allocator->AllocateMemory(
         *pVkMemoryRequirements,
+        pCreateInfo->priority,
         false, // requiresDedicatedAllocation
         false, // prefersDedicatedAllocation
         VK_NULL_HANDLE, // dedicatedBuffer
@@ -16310,6 +16327,7 @@ VkResult vmaAllocateMemoryForBuffer(
 
     VkResult result = allocator->AllocateMemory(
         vkMemReq,
+        pCreateInfo->priority,
         requiresDedicatedAllocation,
         prefersDedicatedAllocation,
         buffer, // dedicatedBuffer
@@ -16361,6 +16379,7 @@ VkResult vmaAllocateMemoryForImage(
 
     VkResult result = allocator->AllocateMemory(
         vkMemReq,
+        pCreateInfo->priority,
         requiresDedicatedAllocation,
         prefersDedicatedAllocation,
         VK_NULL_HANDLE, // dedicatedBuffer
@@ -16835,6 +16854,7 @@ VkResult vmaCreateBuffer(
         // 3. Allocate memory using allocator.
         res = allocator->AllocateMemory(
             vkMemReq,
+            pAllocationCreateInfo->priority,
             requiresDedicatedAllocation,
             prefersDedicatedAllocation,
             *pBuffer, // dedicatedBuffer
@@ -16975,6 +16995,7 @@ VkResult vmaCreateImage(
 
         res = allocator->AllocateMemory(
             vkMemReq,
+            pAllocationCreateInfo->priority,
             requiresDedicatedAllocation,
             prefersDedicatedAllocation,
             VK_NULL_HANDLE, // dedicatedBuffer
