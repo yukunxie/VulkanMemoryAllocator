@@ -51,6 +51,7 @@ Additional features:
    - VK_KHR_dedicated_allocation: Just enable it and it will be used automatically by the library.
    - VK_AMD_device_coherent_memory
    - VK_EXT_buffer_device_address / VK_KHR_buffer_device_address
+   - VK_KHR_ray_tracing
 - Defragmentation of GPU and CPU memory: Let the library move data around to free some memory blocks and make your allocations better compacted.
 - Lost allocations: Allocate memory with appropriate flags and let the library remove allocations that are not used for many frames to make room for new ones.
 - Statistics: Obtain detailed statistics about the amount of memory used, unused, number of allocated blocks, number of allocations etc. - globally, per memory heap, and per memory type.
