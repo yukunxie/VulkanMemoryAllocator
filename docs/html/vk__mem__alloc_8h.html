@@ -143,17 +143,23 @@ Macros</h2></td></tr>
 <tr class="separator:a05decf1cf4ebf767beba7acca6c1ec3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7f9d5e71b70dd1a137c303a8a8262c10"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#a7f9d5e71b70dd1a137c303a8a8262c10">VMA_BUFFER_DEVICE_ADDRESS</a>&#160;&#160;&#160;0</td></tr>
 <tr class="separator:a7f9d5e71b70dd1a137c303a8a8262c10"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab5835d2fd40942a2c5ed61ef2dd99574"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#ab5835d2fd40942a2c5ed61ef2dd99574">VMA_DECORATE_RAY_TRACING</a>(identifier)&#160;&#160;&#160;identifier##KHR</td></tr>
+<tr class="separator:ab5835d2fd40942a2c5ed61ef2dd99574"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae155dff416ff76091c8113ea34cdd045"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#ae155dff416ff76091c8113ea34cdd045">VMA_DECORATE_RAY_TRACING_CONSTANT</a>(identifier)&#160;&#160;&#160;identifier##_KHR</td></tr>
+<tr class="separator:ae155dff416ff76091c8113ea34cdd045"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7842894f0a4722c7ebfe69173e475cc2"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#a7842894f0a4722c7ebfe69173e475cc2">VMA_DECORATE_RAY_TRACING_STRING</a>(str)&#160;&#160;&#160;str &quot;KHR&quot;</td></tr>
+<tr class="separator:a7842894f0a4722c7ebfe69173e475cc2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae25f0d55fd91cb166f002b63244800e1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#ae25f0d55fd91cb166f002b63244800e1">VMA_STATS_STRING_ENABLED</a>&#160;&#160;&#160;1</td></tr>
 <tr class="separator:ae25f0d55fd91cb166f002b63244800e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:ab6a6477cda1ce775b30bde96d766203b"><td class="memItemLeft" align="right" valign="top">typedef void(VKAPI_PTR *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#ab6a6477cda1ce775b30bde96d766203b">PFN_vmaAllocateDeviceMemoryFunction</a>) (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, uint32_t memoryType, VkDeviceMemory memory, VkDeviceSize size)</td></tr>
-<tr class="memdesc:ab6a6477cda1ce775b30bde96d766203b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback function called after successful vkAllocateMemory.  <a href="vk__mem__alloc_8h.html#ab6a6477cda1ce775b30bde96d766203b">More...</a><br /></td></tr>
-<tr class="separator:ab6a6477cda1ce775b30bde96d766203b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aef2545dc2e9dd4f29ab9ba6ac6fe2f49"><td class="memItemLeft" align="right" valign="top">typedef void(VKAPI_PTR *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#aef2545dc2e9dd4f29ab9ba6ac6fe2f49">PFN_vmaFreeDeviceMemoryFunction</a>) (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, uint32_t memoryType, VkDeviceMemory memory, VkDeviceSize size)</td></tr>
-<tr class="memdesc:aef2545dc2e9dd4f29ab9ba6ac6fe2f49"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback function called before vkFreeMemory.  <a href="vk__mem__alloc_8h.html#aef2545dc2e9dd4f29ab9ba6ac6fe2f49">More...</a><br /></td></tr>
-<tr class="separator:aef2545dc2e9dd4f29ab9ba6ac6fe2f49"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7e1ed85f7799600b03ad51a77acc21f3"><td class="memItemLeft" align="right" valign="top">typedef void(VKAPI_PTR *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#a7e1ed85f7799600b03ad51a77acc21f3">PFN_vmaAllocateDeviceMemoryFunction</a>) (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, uint32_t memoryType, VkDeviceMemory memory, VkDeviceSize size, void *pUserData)</td></tr>
+<tr class="memdesc:a7e1ed85f7799600b03ad51a77acc21f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback function called after successful vkAllocateMemory.  <a href="vk__mem__alloc_8h.html#a7e1ed85f7799600b03ad51a77acc21f3">More...</a><br /></td></tr>
+<tr class="separator:a7e1ed85f7799600b03ad51a77acc21f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a154ccaaf53dc2c36378f80f0c4f3679b"><td class="memItemLeft" align="right" valign="top">typedef void(VKAPI_PTR *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#a154ccaaf53dc2c36378f80f0c4f3679b">PFN_vmaFreeDeviceMemoryFunction</a>) (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, uint32_t memoryType, VkDeviceMemory memory, VkDeviceSize size, void *pUserData)</td></tr>
+<tr class="memdesc:a154ccaaf53dc2c36378f80f0c4f3679b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback function called before vkFreeMemory.  <a href="vk__mem__alloc_8h.html#a154ccaaf53dc2c36378f80f0c4f3679b">More...</a><br /></td></tr>
+<tr class="separator:a154ccaaf53dc2c36378f80f0c4f3679b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a77692d3c8770ea8882d573206bd27b2b"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="struct_vma_device_memory_callbacks.html">VmaDeviceMemoryCallbacks</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#a77692d3c8770ea8882d573206bd27b2b">VmaDeviceMemoryCallbacks</a></td></tr>
 <tr class="memdesc:a77692d3c8770ea8882d573206bd27b2b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set of callbacks that the library will call for <code>vkAllocateMemory</code> and <code>vkFreeMemory</code>.  <a href="vk__mem__alloc_8h.html#a77692d3c8770ea8882d573206bd27b2b">More...</a><br /></td></tr>
 <tr class="separator:a77692d3c8770ea8882d573206bd27b2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -452,6 +458,15 @@ Functions</h2></td></tr>
 <tr class="memitem:ae50d2cb3b4a3bfd4dd40987234e50e7e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#ae50d2cb3b4a3bfd4dd40987234e50e7e">vmaDestroyImage</a> (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, VkImage image, <a class="el" href="struct_vma_allocation.html">VmaAllocation</a> allocation)</td></tr>
 <tr class="memdesc:ae50d2cb3b4a3bfd4dd40987234e50e7e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroys Vulkan image and frees allocated memory.  <a href="vk__mem__alloc_8h.html#ae50d2cb3b4a3bfd4dd40987234e50e7e">More...</a><br /></td></tr>
 <tr class="separator:ae50d2cb3b4a3bfd4dd40987234e50e7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae0532ba061bf04d7c29a1a2d3f536d91"><td class="memItemLeft" align="right" valign="top">VkResult&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#ae0532ba061bf04d7c29a1a2d3f536d91">vmaCreateAccelerationStructure</a> (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, const <a class="el" href="vk__mem__alloc_8h.html#ab5835d2fd40942a2c5ed61ef2dd99574">VMA_DECORATE_RAY_TRACING</a>(VkAccelerationStructureCreateInfo) *pAccelerationStructureCreateInfo, const <a class="el" href="struct_vma_allocation_create_info.html">VmaAllocationCreateInfo</a> *pAllocationCreateInfo, <a class="el" href="vk__mem__alloc_8h.html#ab5835d2fd40942a2c5ed61ef2dd99574">VMA_DECORATE_RAY_TRACING</a>(VkAccelerationStructure) *pAccelerationStructure, <a class="el" href="struct_vma_allocation.html">VmaAllocation</a> *pAllocation, <a class="el" href="struct_vma_allocation_info.html">VmaAllocationInfo</a> *pAllocationInfo)</td></tr>
+<tr class="memdesc:ae0532ba061bf04d7c29a1a2d3f536d91"><td class="mdescLeft">&#160;</td><td class="mdescRight">TODO.  <a href="vk__mem__alloc_8h.html#ae0532ba061bf04d7c29a1a2d3f536d91">More...</a><br /></td></tr>
+<tr class="separator:ae0532ba061bf04d7c29a1a2d3f536d91"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a14c61209a422c2cec0a533b1a4656b8e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#a14c61209a422c2cec0a533b1a4656b8e">vmaDestroyAccelerationStructure</a> (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, <a class="el" href="vk__mem__alloc_8h.html#ab5835d2fd40942a2c5ed61ef2dd99574">VMA_DECORATE_RAY_TRACING</a>(VkAccelerationStructure) accelerationStructrure, <a class="el" href="struct_vma_allocation.html">VmaAllocation</a> allocation)</td></tr>
+<tr class="memdesc:a14c61209a422c2cec0a533b1a4656b8e"><td class="mdescLeft">&#160;</td><td class="mdescRight">TODO.  <a href="vk__mem__alloc_8h.html#a14c61209a422c2cec0a533b1a4656b8e">More...</a><br /></td></tr>
+<tr class="separator:a14c61209a422c2cec0a533b1a4656b8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa17d5260f069dd44e84987e0cebe6d03"><td class="memItemLeft" align="right" valign="top">VkResult&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="vk__mem__alloc_8h.html#aa17d5260f069dd44e84987e0cebe6d03">vmaCreateAccelerationStructureScratchBuffer</a> (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, <a class="el" href="vk__mem__alloc_8h.html#ab5835d2fd40942a2c5ed61ef2dd99574">VMA_DECORATE_RAY_TRACING</a>(VkAccelerationStructureMemoryRequirementsType) type, <a class="el" href="vk__mem__alloc_8h.html#ab5835d2fd40942a2c5ed61ef2dd99574">VMA_DECORATE_RAY_TRACING</a>(VkAccelerationStructure) accelerationStructure, const VkBufferCreateInfo *pBufferCreateInfo, const <a class="el" href="struct_vma_allocation_create_info.html">VmaAllocationCreateInfo</a> *pAllocationCreateInfo, VkBuffer *pBuffer, <a class="el" href="struct_vma_allocation.html">VmaAllocation</a> *pAllocation, <a class="el" href="struct_vma_allocation_info.html">VmaAllocationInfo</a> *pAllocationInfo)</td></tr>
+<tr class="memdesc:aa17d5260f069dd44e84987e0cebe6d03"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a buffer suitable for build or update of ray tracing acceleration structure.  <a href="vk__mem__alloc_8h.html#aa17d5260f069dd44e84987e0cebe6d03">More...</a><br /></td></tr>
+<tr class="separator:aa17d5260f069dd44e84987e0cebe6d03"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="a9f918755b601cf4bffca775992e6fb90"></a>
@@ -490,6 +505,60 @@ Functions</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">#define VMA_BUFFER_DEVICE_ADDRESS&#160;&#160;&#160;0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ab5835d2fd40942a2c5ed61ef2dd99574"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab5835d2fd40942a2c5ed61ef2dd99574">&#9670;&nbsp;</a></span>VMA_DECORATE_RAY_TRACING</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define VMA_DECORATE_RAY_TRACING</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">identifier</td><td>)</td>
+          <td>&#160;&#160;&#160;identifier##KHR</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ae155dff416ff76091c8113ea34cdd045"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae155dff416ff76091c8113ea34cdd045">&#9670;&nbsp;</a></span>VMA_DECORATE_RAY_TRACING_CONSTANT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define VMA_DECORATE_RAY_TRACING_CONSTANT</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">identifier</td><td>)</td>
+          <td>&#160;&#160;&#160;identifier##_KHR</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a7842894f0a4722c7ebfe69173e475cc2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7842894f0a4722c7ebfe69173e475cc2">&#9670;&nbsp;</a></span>VMA_DECORATE_RAY_TRACING_STRING</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define VMA_DECORATE_RAY_TRACING_STRING</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">str</td><td>)</td>
+          <td>&#160;&#160;&#160;str &quot;KHR&quot;</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -567,14 +636,14 @@ Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Typedef Documentation</h2>
-<a id="ab6a6477cda1ce775b30bde96d766203b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab6a6477cda1ce775b30bde96d766203b">&#9670;&nbsp;</a></span>PFN_vmaAllocateDeviceMemoryFunction</h2>
+<a id="a7e1ed85f7799600b03ad51a77acc21f3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7e1ed85f7799600b03ad51a77acc21f3">&#9670;&nbsp;</a></span>PFN_vmaAllocateDeviceMemoryFunction</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef void(VKAPI_PTR * PFN_vmaAllocateDeviceMemoryFunction) (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, uint32_t memoryType, VkDeviceMemory memory, VkDeviceSize size)</td>
+          <td class="memname">typedef void(VKAPI_PTR * PFN_vmaAllocateDeviceMemoryFunction) (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, uint32_t memoryType, VkDeviceMemory memory, VkDeviceSize size, void *pUserData)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -583,14 +652,14 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="aef2545dc2e9dd4f29ab9ba6ac6fe2f49"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aef2545dc2e9dd4f29ab9ba6ac6fe2f49">&#9670;&nbsp;</a></span>PFN_vmaFreeDeviceMemoryFunction</h2>
+<a id="a154ccaaf53dc2c36378f80f0c4f3679b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a154ccaaf53dc2c36378f80f0c4f3679b">&#9670;&nbsp;</a></span>PFN_vmaFreeDeviceMemoryFunction</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef void(VKAPI_PTR * PFN_vmaFreeDeviceMemoryFunction) (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, uint32_t memoryType, VkDeviceMemory memory, VkDeviceSize size)</td>
+          <td class="memname">typedef void(VKAPI_PTR * PFN_vmaFreeDeviceMemoryFunction) (<a class="el" href="struct_vma_allocator.html">VmaAllocator</a> allocator, uint32_t memoryType, VkDeviceMemory memory, VkDeviceSize size, void *pUserData)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1033,7 +1102,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Pointers to some Vulkan functions - a subset used by the library. </p>
-<p>Used in <a class="el" href="struct_vma_allocator_create_info.html#a3dc197be3227da7338b1643f70db36bd" title="Pointers to Vulkan functions. Can be null if you leave define VMA_STATIC_VULKAN_FUNCTIONS 1.">VmaAllocatorCreateInfo::pVulkanFunctions</a>. </p>
+<p>Used in <a class="el" href="struct_vma_allocator_create_info.html#a3dc197be3227da7338b1643f70db36bd" title="Pointers to Vulkan functions. Can be null.">VmaAllocatorCreateInfo::pVulkanFunctions</a>. </p>
 
 </div>
 </div>
@@ -1899,6 +1968,130 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="ae0532ba061bf04d7c29a1a2d3f536d91"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae0532ba061bf04d7c29a1a2d3f536d91">&#9670;&nbsp;</a></span>vmaCreateAccelerationStructure()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">VkResult vmaCreateAccelerationStructure </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="struct_vma_allocator.html">VmaAllocator</a>&#160;</td>
+          <td class="paramname"><em>allocator</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="vk__mem__alloc_8h.html#ab5835d2fd40942a2c5ed61ef2dd99574">VMA_DECORATE_RAY_TRACING</a>(VkAccelerationStructureCreateInfo) *&#160;</td>
+          <td class="paramname"><em>pAccelerationStructureCreateInfo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="struct_vma_allocation_create_info.html">VmaAllocationCreateInfo</a> *&#160;</td>
+          <td class="paramname"><em>pAllocationCreateInfo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="vk__mem__alloc_8h.html#ab5835d2fd40942a2c5ed61ef2dd99574">VMA_DECORATE_RAY_TRACING</a>(VkAccelerationStructure) *&#160;</td>
+          <td class="paramname"><em>pAccelerationStructure</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_vma_allocation.html">VmaAllocation</a> *&#160;</td>
+          <td class="paramname"><em>pAllocation</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_vma_allocation_info.html">VmaAllocationInfo</a> *&#160;</td>
+          <td class="paramname"><em>pAllocationInfo</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>TODO. </p>
+<p>TODO </p>
+
+</div>
+</div>
+<a id="aa17d5260f069dd44e84987e0cebe6d03"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa17d5260f069dd44e84987e0cebe6d03">&#9670;&nbsp;</a></span>vmaCreateAccelerationStructureScratchBuffer()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">VkResult vmaCreateAccelerationStructureScratchBuffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="struct_vma_allocator.html">VmaAllocator</a>&#160;</td>
+          <td class="paramname"><em>allocator</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="vk__mem__alloc_8h.html#ab5835d2fd40942a2c5ed61ef2dd99574">VMA_DECORATE_RAY_TRACING</a>(VkAccelerationStructureMemoryRequirementsType)&#160;</td>
+          <td class="paramname"><em>type</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="vk__mem__alloc_8h.html#ab5835d2fd40942a2c5ed61ef2dd99574">VMA_DECORATE_RAY_TRACING</a>(VkAccelerationStructure)&#160;</td>
+          <td class="paramname"><em>accelerationStructure</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const VkBufferCreateInfo *&#160;</td>
+          <td class="paramname"><em>pBufferCreateInfo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="struct_vma_allocation_create_info.html">VmaAllocationCreateInfo</a> *&#160;</td>
+          <td class="paramname"><em>pAllocationCreateInfo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">VkBuffer *&#160;</td>
+          <td class="paramname"><em>pBuffer</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_vma_allocation.html">VmaAllocation</a> *&#160;</td>
+          <td class="paramname"><em>pAllocation</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_vma_allocation_info.html">VmaAllocationInfo</a> *&#160;</td>
+          <td class="paramname"><em>pAllocationInfo</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Creates a buffer suitable for build or update of ray tracing acceleration structure. </p>
+<p>The function is similar to <a class="el" href="vk__mem__alloc_8h.html#ac72ee55598617e8eecca384e746bab51">vmaCreateBuffer()</a>, but it automatically calculates required size based on given acceleration structure parameters. <code>type</code> must be <code>VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR</code> or <code>VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR</code>.</p>
+<p><code>pBufferCreateInfo-&gt;size</code> can be zero. If its value not zero, the size of the created buffer is maximum of this value and the required size calculated based on the acceleration structure.</p>
+<p>You can free the buffer normally when no longer needed e.g. using <a class="el" href="vk__mem__alloc_8h.html#a0d9f4e4ba5bf9aab1f1c746387753d77" title="Destroys Vulkan buffer and frees allocated memory.">vmaDestroyBuffer()</a>. </p>
+
+</div>
+</div>
 <a id="a200692051ddb34240248234f5f4c17bb"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a200692051ddb34240248234f5f4c17bb">&#9670;&nbsp;</a></span>vmaCreateAllocator()</h2>
 
@@ -2295,6 +2488,43 @@ Functions</h2></td></tr>
 
 <p>Ends defragmentation process. </p>
 <p>Use this function to finish defragmentation started by <a class="el" href="vk__mem__alloc_8h.html#a36ba776fd7fd5cb1e9359fdc0d8e6e8a" title="Begins defragmentation process.">vmaDefragmentationBegin()</a>. It is safe to pass <code>context == null</code>. The function then does nothing. </p>
+
+</div>
+</div>
+<a id="a14c61209a422c2cec0a533b1a4656b8e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a14c61209a422c2cec0a533b1a4656b8e">&#9670;&nbsp;</a></span>vmaDestroyAccelerationStructure()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void vmaDestroyAccelerationStructure </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="struct_vma_allocator.html">VmaAllocator</a>&#160;</td>
+          <td class="paramname"><em>allocator</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="vk__mem__alloc_8h.html#ab5835d2fd40942a2c5ed61ef2dd99574">VMA_DECORATE_RAY_TRACING</a>(VkAccelerationStructure)&#160;</td>
+          <td class="paramname"><em>accelerationStructrure</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_vma_allocation.html">VmaAllocation</a>&#160;</td>
+          <td class="paramname"><em>allocation</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>TODO. </p>
+<p>TODO </p>
 
 </div>
 </div>
