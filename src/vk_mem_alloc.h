@@ -1935,12 +1935,6 @@ available through VmaAllocatorCreateInfo::pRecordSettings.
     #define VMA_CALL_POST
 #endif
 
-#ifndef VMA_DECORATE_RAY_TRACING
-    #define VMA_DECORATE_RAY_TRACING(identifier)   identifier##KHR
-    #define VMA_DECORATE_RAY_TRACING_CONSTANT(identifier)   identifier##_KHR
-    #define VMA_DECORATE_RAY_TRACING_STRING(str)   str "KHR"
-#endif
-
 /** \struct VmaAllocator
 \brief Represents main object of this library initialized.
 
@@ -2116,10 +2110,10 @@ typedef struct VmaVulkanFunctions {
 #if VMA_MEMORY_BUDGET || VMA_VULKAN_VERSION >= 1001000
     PFN_vkGetPhysicalDeviceMemoryProperties2KHR vkGetPhysicalDeviceMemoryProperties2KHR;
 #endif
-    VMA_DECORATE_RAY_TRACING(PFN_vkCreateAccelerationStructure) VMA_DECORATE_RAY_TRACING(vkCreateAccelerationStructure);
-    VMA_DECORATE_RAY_TRACING(PFN_vkDestroyAccelerationStructure) VMA_DECORATE_RAY_TRACING(vkDestroyAccelerationStructure);
-    VMA_DECORATE_RAY_TRACING(PFN_vkGetAccelerationStructureMemoryRequirements) VMA_DECORATE_RAY_TRACING(vkGetAccelerationStructureMemoryRequirements);
-    VMA_DECORATE_RAY_TRACING(PFN_vkBindAccelerationStructureMemory) VMA_DECORATE_RAY_TRACING(vkBindAccelerationStructureMemory);
+    PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR;
+    PFN_vkDestroyAccelerationStructureKHR vkDestroyAccelerationStructureKHR;
+    PFN_vkGetAccelerationStructureMemoryRequirementsKHR vkGetAccelerationStructureMemoryRequirementsKHR;
+    PFN_vkBindAccelerationStructureMemoryKHR vkBindAccelerationStructureMemoryKHR;
 } VmaVulkanFunctions;
 
 /// Flags to be used in VmaRecordSettings::flags.
@@ -3672,9 +3666,10 @@ Two new objects are returned: `pAccelerationStruvture` and `pAllocation`.
 */
 VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateAccelerationStructure(
     VmaAllocator allocator,
-    const VMA_DECORATE_RAY_TRACING(VkAccelerationStructureCreateInfo)* pAccelerationStructureCreateInfo,
+    const VkAccelerationStructureCreateInfoKHR* pAccelerationStructureCreateInfo,
+    VkAccelerationStructureBuildTypeKHR buildType,
     const VmaAllocationCreateInfo* pAllocationCreateInfo,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructure)* pAccelerationStructure,
+    VkAccelerationStructureKHR* pAccelerationStructure,
     VmaAllocation* pAllocation,
     VmaAllocationInfo* pAllocationInfo);
 
@@ -3687,14 +3682,15 @@ This function is equivalent of calling `vkDestroyAccelerationStructure` and
 */
 VMA_CALL_PRE void VMA_CALL_POST vmaDestroyAccelerationStructure(
     VmaAllocator allocator,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) accelerationStructrure,
+    VkAccelerationStructureKHR accelerationStructrure,
     VmaAllocation allocation);
 
 /** \brief Creates a buffer suitable for build or update of ray tracing acceleration structure.
 
 The function is similar to vmaCreateBuffer(), but it automatically calculates
 required size based on given acceleration structure parameters.
-`type` must be `VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR`
+
+`pMemReqInfo->type` must be `VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR`
 or `VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR`.
 
 `pBufferCreateInfo->size` can be zero. If its value not zero, the size of the
@@ -3705,8 +3701,7 @@ You can free the buffer normally when no longer needed e.g. using vmaDestroyBuff
 */
 VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateAccelerationStructureScratchBuffer(
     VmaAllocator allocator,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructureMemoryRequirementsType) type,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) accelerationStructure,
+    const VkAccelerationStructureMemoryRequirementsInfoKHR* pMemReqInfo,
     const VkBufferCreateInfo* pBufferCreateInfo,
     const VmaAllocationCreateInfo* pAllocationCreateInfo,
     VkBuffer* pBuffer,
@@ -6480,7 +6475,7 @@ public:
         const VmaAllocator hAllocator,
         const VmaAllocation hAllocation,
         VkDeviceSize allocationLocalOffset,
-        VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) hAccelerationStructure,
+        VkAccelerationStructureKHR hAccelerationStructure,
         const void* pNext);
 
 private:
@@ -7456,8 +7451,7 @@ public:
         bool& requiresDedicatedAllocation,
         bool& prefersDedicatedAllocation) const;
     void GetAccelerationStructureMemoryRequirements(
-        VMA_DECORATE_RAY_TRACING(VkAccelerationStructureMemoryRequirementsType) type,
-        VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) hAccelerationStructure,
+        const VkAccelerationStructureMemoryRequirementsInfoKHR* memReqInfo,
         VkMemoryRequirements& outMemReq) const;
 
     // Main allocation function.
@@ -7542,7 +7536,7 @@ public:
     VkResult BindVulkanAccelerationStructure(
         VkDeviceMemory memory,
         VkDeviceSize memoryOffset,
-        VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) accelerationStructure,
+        VkAccelerationStructureKHR accelerationStructure,
         const void* pNext);
 
     VkResult Map(VmaAllocation hAllocation, void** ppData);
@@ -7561,7 +7555,7 @@ public:
     VkResult BindAccelerationStructureMemory(
         VmaAllocation hAllocation,
         VkDeviceSize allocationLocalOffset,
-        VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) hAccelerationStructure,
+        VkAccelerationStructureKHR hAccelerationStructure,
         const void* pNext);
 
     void FlushOrInvalidateAllocation(
@@ -12029,7 +12023,7 @@ VkResult VmaDeviceMemoryBlock::BindAccelerationStructureMemory(
     const VmaAllocator hAllocator,
     const VmaAllocation hAllocation,
     VkDeviceSize allocationLocalOffset,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) hAccelerationStructure,
+    VkAccelerationStructureKHR hAccelerationStructure,
     const void* pNext)
 {
     VMA_ASSERT(hAllocation->GetType() == VmaAllocation_T::ALLOCATION_TYPE_BLOCK &&
@@ -15452,14 +15446,14 @@ void VmaAllocator_T::ImportVulkanFunctions(const VmaVulkanFunctions* pVulkanFunc
         }
     }
 #endif // #if VMA_MEMORY_BUDGET
-    m_VulkanFunctions.VMA_DECORATE_RAY_TRACING(vkCreateAccelerationStructure) =
-        (VMA_DECORATE_RAY_TRACING(PFN_vkCreateAccelerationStructure))vkGetDeviceProcAddr(m_hDevice, VMA_DECORATE_RAY_TRACING_STRING("vkCreateAccelerationStructure"));
-    m_VulkanFunctions.VMA_DECORATE_RAY_TRACING(vkDestroyAccelerationStructure) =
-        (PFN_vkDestroyAccelerationStructureNV)vkGetDeviceProcAddr(m_hDevice, VMA_DECORATE_RAY_TRACING_STRING("vkDestroyAccelerationStructure"));
-    m_VulkanFunctions.VMA_DECORATE_RAY_TRACING(vkGetAccelerationStructureMemoryRequirements) =
-        (PFN_vkGetAccelerationStructureMemoryRequirementsNV)vkGetDeviceProcAddr(m_hDevice, VMA_DECORATE_RAY_TRACING_STRING("vkGetAccelerationStructureMemoryRequirements"));
-    m_VulkanFunctions.VMA_DECORATE_RAY_TRACING(vkBindAccelerationStructureMemory) =
-        (PFN_vkBindAccelerationStructureMemoryNV)vkGetDeviceProcAddr(m_hDevice, VMA_DECORATE_RAY_TRACING_STRING("vkBindAccelerationStructureMemory"));
+    m_VulkanFunctions.vkCreateAccelerationStructureKHR =
+        (PFN_vkCreateAccelerationStructureKHR)vkGetDeviceProcAddr(m_hDevice, "vkCreateAccelerationStructureKHR");
+    m_VulkanFunctions.vkDestroyAccelerationStructureKHR =
+        (PFN_vkDestroyAccelerationStructureNV)vkGetDeviceProcAddr(m_hDevice, "vkDestroyAccelerationStructureKHR");
+    m_VulkanFunctions.vkGetAccelerationStructureMemoryRequirementsKHR =
+        (PFN_vkGetAccelerationStructureMemoryRequirementsNV)vkGetDeviceProcAddr(m_hDevice, "vkGetAccelerationStructureMemoryRequirementsKHR");
+    m_VulkanFunctions.vkBindAccelerationStructureMemory =
+        (PFN_vkBindAccelerationStructureMemoryNV)vkGetDeviceProcAddr(m_hDevice, "vkBindAccelerationStructureMemoryKHR");
 
 #define VMA_COPY_IF_NOT_NULL(funcName) \
     if(pVulkanFunctions->funcName != VMA_NULL) m_VulkanFunctions.funcName = pVulkanFunctions->funcName;
@@ -15494,10 +15488,10 @@ void VmaAllocator_T::ImportVulkanFunctions(const VmaVulkanFunctions* pVulkanFunc
 #if VMA_MEMORY_BUDGET
         VMA_COPY_IF_NOT_NULL(vkGetPhysicalDeviceMemoryProperties2KHR);
 #endif
-        VMA_COPY_IF_NOT_NULL(VMA_DECORATE_RAY_TRACING(vkCreateAccelerationStructure));
-        VMA_COPY_IF_NOT_NULL(VMA_DECORATE_RAY_TRACING(vkDestroyAccelerationStructure));
-        VMA_COPY_IF_NOT_NULL(VMA_DECORATE_RAY_TRACING(vkGetAccelerationStructureMemoryRequirements));
-        VMA_COPY_IF_NOT_NULL(VMA_DECORATE_RAY_TRACING(vkBindAccelerationStructureMemory));
+        VMA_COPY_IF_NOT_NULL(vkCreateAccelerationStructureKHR);
+        VMA_COPY_IF_NOT_NULL(vkDestroyAccelerationStructureKHR);
+        VMA_COPY_IF_NOT_NULL(vkGetAccelerationStructureMemoryRequirementsKHR);
+        VMA_COPY_IF_NOT_NULL(vkBindAccelerationStructureMemoryKHR);
     }
 
 #undef VMA_COPY_IF_NOT_NULL
@@ -15539,10 +15533,10 @@ void VmaAllocator_T::ImportVulkanFunctions(const VmaVulkanFunctions* pVulkanFunc
         VMA_ASSERT(m_VulkanFunctions.vkGetPhysicalDeviceMemoryProperties2KHR != VMA_NULL);
     }
 #endif
-    VMA_ASSERT(m_VulkanFunctions.VMA_DECORATE_RAY_TRACING(vkCreateAccelerationStructure) != VMA_NULL);
-    VMA_ASSERT(m_VulkanFunctions.VMA_DECORATE_RAY_TRACING(vkDestroyAccelerationStructure) != VMA_NULL);
-    VMA_ASSERT(m_VulkanFunctions.VMA_DECORATE_RAY_TRACING(vkGetAccelerationStructureMemoryRequirements) != VMA_NULL);
-    VMA_ASSERT(m_VulkanFunctions.VMA_DECORATE_RAY_TRACING(vkBindAccelerationStructureMemory) != VMA_NULL);
+    VMA_ASSERT(m_VulkanFunctions.vkCreateAccelerationStructureKHR != VMA_NULL);
+    VMA_ASSERT(m_VulkanFunctions.vkDestroyAccelerationStructureKHR != VMA_NULL);
+    VMA_ASSERT(m_VulkanFunctions.vkGetAccelerationStructureMemoryRequirementsKHR != VMA_NULL);
+    VMA_ASSERT(m_VulkanFunctions.vkBindAccelerationStructureMemoryKHR != VMA_NULL);
 }
 
 VkDeviceSize VmaAllocator_T::CalcPreferredBlockSize(uint32_t memTypeIndex)
@@ -15922,17 +15916,12 @@ void VmaAllocator_T::GetImageMemoryRequirements(
 }
 
 void VmaAllocator_T::GetAccelerationStructureMemoryRequirements(
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructureMemoryRequirementsType) type,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) hAccelerationStructure,
+    const VkAccelerationStructureMemoryRequirementsInfoKHR* memReqInfo,
     VkMemoryRequirements& outMemReq) const
 {
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructureMemoryRequirementsInfo) memReqInfo = { VMA_DECORATE_RAY_TRACING_CONSTANT(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO) };
-    memReqInfo.type = VMA_DECORATE_RAY_TRACING_CONSTANT(VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT);
-    memReqInfo.accelerationStructure = hAccelerationStructure;
-
     VkMemoryRequirements2 memReq2 = { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
 
-    (*m_VulkanFunctions.VMA_DECORATE_RAY_TRACING(vkGetAccelerationStructureMemoryRequirements))(m_hDevice, &memReqInfo, &memReq2);
+    (*m_VulkanFunctions.vkGetAccelerationStructureMemoryRequirementsKHR)(m_hDevice, memReqInfo, &memReq2);
 
     outMemReq = memReq2.memoryRequirements;
 }
@@ -16710,15 +16699,15 @@ VkResult VmaAllocator_T::BindVulkanImage(
 VkResult VmaAllocator_T::BindVulkanAccelerationStructure(
     VkDeviceMemory memory,
     VkDeviceSize memoryOffset,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) accelerationStructure,
+    VkAccelerationStructureKHR accelerationStructure,
     const void* pNext)
 {
-    VMA_DECORATE_RAY_TRACING(VkBindAccelerationStructureMemoryInfo) bindInfo = { VMA_DECORATE_RAY_TRACING_CONSTANT(VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO) };
+    VkBindAccelerationStructureMemoryInfoKHR bindInfo = { VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR };
     bindInfo.pNext = pNext;
     bindInfo.accelerationStructure = accelerationStructure;
     bindInfo.memory = memory;
     bindInfo.memoryOffset = memoryOffset;
-    return (*m_VulkanFunctions.VMA_DECORATE_RAY_TRACING(vkBindAccelerationStructureMemory))(m_hDevice, 1, &bindInfo);
+    return (*m_VulkanFunctions.vkBindAccelerationStructureMemoryKHR)(m_hDevice, 1, &bindInfo);
 }
 
 VkResult VmaAllocator_T::Map(VmaAllocation hAllocation, void** ppData)
@@ -16822,7 +16811,7 @@ VkResult VmaAllocator_T::BindImageMemory(
 VkResult VmaAllocator_T::BindAccelerationStructureMemory(
     VmaAllocation hAllocation,
     VkDeviceSize allocationLocalOffset,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) hAccelerationStructure,
+    VkAccelerationStructureKHR hAccelerationStructure,
     const void* pNext)
 {
     VkResult res = VK_SUCCESS;
@@ -18638,9 +18627,10 @@ VMA_CALL_PRE void VMA_CALL_POST vmaDestroyImage(
 
 VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateAccelerationStructure(
     VmaAllocator allocator,
-    const VMA_DECORATE_RAY_TRACING(VkAccelerationStructureCreateInfo)* pAccelerationStructureCreateInfo,
+    const VkAccelerationStructureCreateInfoKHR* pAccelerationStructureCreateInfo,
+    VkAccelerationStructureBuildTypeKHR buildType,
     const VmaAllocationCreateInfo* pAllocationCreateInfo,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructure)* pAccelerationStructure,
+    VkAccelerationStructureKHR* pAccelerationStructure,
     VmaAllocation* pAllocation,
     VmaAllocationInfo* pAllocationInfo)
 {
@@ -18650,11 +18640,11 @@ VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateAccelerationStructure(
 
     VMA_DEBUG_GLOBAL_MUTEX_LOCK
 
-        *pAccelerationStructure = VK_NULL_HANDLE;
+    *pAccelerationStructure = VK_NULL_HANDLE;
     *pAllocation = VK_NULL_HANDLE;
 
     // 1. Create VkAccelerationStructureKHR.
-    VkResult res = (*allocator->GetVulkanFunctions().VMA_DECORATE_RAY_TRACING(vkCreateAccelerationStructure))(
+    VkResult res = (*allocator->GetVulkanFunctions().vkCreateAccelerationStructureKHR)(
         allocator->m_hDevice,
         pAccelerationStructureCreateInfo,
         allocator->GetAllocationCallbacks(),
@@ -18662,12 +18652,16 @@ VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateAccelerationStructure(
     if(res >= 0)
     {
         // 2. vkGetAccelerationStructureMemoryRequirements.
-        VkMemoryRequirements vkMemReq = {};
         const bool requiresDedicatedAllocation = false;
         const bool prefersDedicatedAllocation  = false;
-        allocator->GetAccelerationStructureMemoryRequirements(
-            VMA_DECORATE_RAY_TRACING_CONSTANT(VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT),
-            *pAccelerationStructure, vkMemReq);
+
+        VkAccelerationStructureMemoryRequirementsInfoKHR memReqInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR };
+        memReqInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR;
+        memReqInfo.buildType = buildType;
+        memReqInfo.accelerationStructure = *pAccelerationStructure;
+
+        VkMemoryRequirements vkMemReq = {};
+        allocator->GetAccelerationStructureMemoryRequirements(&memReqInfo, vkMemReq);
 
         // 3. Allocate memory using allocator.
         res = allocator->AllocateMemory(
@@ -18710,11 +18704,11 @@ VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateAccelerationStructure(
                 1, // allocationCount
                 pAllocation);
             *pAllocation = VK_NULL_HANDLE;
-            (*allocator->GetVulkanFunctions().VMA_DECORATE_RAY_TRACING(vkDestroyAccelerationStructure))(allocator->m_hDevice, *pAccelerationStructure, allocator->GetAllocationCallbacks());
+            (*allocator->GetVulkanFunctions().vkDestroyAccelerationStructureKHR)(allocator->m_hDevice, *pAccelerationStructure, allocator->GetAllocationCallbacks());
             *pAccelerationStructure = VK_NULL_HANDLE;
             return res;
         }
-        (*allocator->GetVulkanFunctions().VMA_DECORATE_RAY_TRACING(vkDestroyAccelerationStructure))(allocator->m_hDevice, *pAccelerationStructure, allocator->GetAllocationCallbacks());
+        (*allocator->GetVulkanFunctions().vkDestroyAccelerationStructureKHR)(allocator->m_hDevice, *pAccelerationStructure, allocator->GetAllocationCallbacks());
         *pAccelerationStructure = VK_NULL_HANDLE;
         return res;
     }
@@ -18723,7 +18717,7 @@ VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateAccelerationStructure(
 
 VMA_CALL_PRE void VMA_CALL_POST vmaDestroyAccelerationStructure(
     VmaAllocator allocator,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) accelerationStructure,
+    VkAccelerationStructureKHR accelerationStructure,
     VmaAllocation allocation)
 {
     VMA_ASSERT(allocator);
@@ -18746,7 +18740,7 @@ VMA_CALL_PRE void VMA_CALL_POST vmaDestroyAccelerationStructure(
 
     if(accelerationStructure != VK_NULL_HANDLE)
     {
-        (*allocator->GetVulkanFunctions().VMA_DECORATE_RAY_TRACING(vkDestroyAccelerationStructure))(allocator->m_hDevice, accelerationStructure, allocator->GetAllocationCallbacks());
+        (*allocator->GetVulkanFunctions().vkDestroyAccelerationStructureKHR)(allocator->m_hDevice, accelerationStructure, allocator->GetAllocationCallbacks());
     }
     if(allocation != VK_NULL_HANDLE)
     {
@@ -18758,24 +18752,23 @@ VMA_CALL_PRE void VMA_CALL_POST vmaDestroyAccelerationStructure(
 
 VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateAccelerationStructureScratchBuffer(
     VmaAllocator allocator,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructureMemoryRequirementsType) type,
-    VMA_DECORATE_RAY_TRACING(VkAccelerationStructure) accelerationStructure,
+    const VkAccelerationStructureMemoryRequirementsInfoKHR* pMemReqInfo,
     const VkBufferCreateInfo* pBufferCreateInfo,
     const VmaAllocationCreateInfo* pAllocationCreateInfo,
     VkBuffer* pBuffer,
     VmaAllocation* pAllocation,
     VmaAllocationInfo* pAllocationInfo)
 {
-    VMA_ASSERT(allocator && accelerationStructure != VK_NULL_HANDLE && pBufferCreateInfo && pAllocationCreateInfo && pBuffer && pAllocation);
-    VMA_ASSERT(type == VMA_DECORATE_RAY_TRACING_CONSTANT(VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH) ||
-        type == VMA_DECORATE_RAY_TRACING_CONSTANT(VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH));
+    VMA_ASSERT(allocator && pMemReqInfo && accelerationStructure != VK_NULL_HANDLE && pBufferCreateInfo && pAllocationCreateInfo && pBuffer && pAllocation);
+    VMA_ASSERT(pMemReqInfo->type == VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR ||
+        pMemReqInfo->type == VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR);
 
     VMA_DEBUG_LOG("vmaCreateAccelerationStructureScratchBuffer");
 
     VMA_DEBUG_GLOBAL_MUTEX_LOCK
 
     VkMemoryRequirements memReq = {};
-    allocator->GetAccelerationStructureMemoryRequirements(type, accelerationStructure, memReq);
+    allocator->GetAccelerationStructureMemoryRequirements(pMemReqInfo, memReq);
 
     VkBufferCreateInfo bufCreateInfoCopy = *pBufferCreateInfo;
     bufCreateInfoCopy.size = VMA_MAX(bufCreateInfoCopy.size, memReq.size);
