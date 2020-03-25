@@ -3663,9 +3663,13 @@ VMA_CALL_PRE void VMA_CALL_POST vmaDestroyImage(
     VkImage image,
     VmaAllocation allocation);
 
-/** \brief TODO
+/** \brief Creates new ray tracing acceleration structure, allocates memory for it, and binds them together, all in one call.
 
-TODO
+The function is similar to vmaCreateBuffer() or vmaCreateImage().
+
+Two new objects are returned: `pAccelerationStruvture` and `pAllocation`.
+
+`pAllocationInfo` is optional. You can pass null if you don't need this structure to be returned.
 */
 VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateAccelerationStructure(
     VmaAllocator allocator,
@@ -3675,9 +3679,12 @@ VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateAccelerationStructure(
     VmaAllocation* pAllocation,
     VmaAllocationInfo* pAllocationInfo);
 
-/** \brief TODO
+/** \brief Destroys acceleration structure and its allocation.
 
-TODO
+Both `accelerationStructrure` and `allocation` are optional and can be `VK_NULL_HANDLE`.
+
+This function is equivalent of calling `vkDestroyAccelerationStructure` and
+`vmaFreeMemory` separately.
 */
 VMA_CALL_PRE void VMA_CALL_POST vmaDestroyAccelerationStructure(
     VmaAllocator allocator,
